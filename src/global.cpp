@@ -158,9 +158,6 @@ bool Global::enabledIncompatibleGDSettings() {
   if (GameManager::sharedState()->getGameVariable(GameVar::ClickBetweenSteps))
   settingsToDisable.push_back("Click Between Steps");
   
-  if (GameManager::sharedState()->getGameVariable(GameVar::ClickOnSteps))
-  settingsToDisable.push_back("Click On Steps");
-  
   #ifdef GEODE_IS_MOBILE
   if (auto pl = PlayLayer::get()) {
     if (pl->m_level->m_cbsOverride == 1)

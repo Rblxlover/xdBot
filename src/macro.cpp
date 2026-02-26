@@ -40,9 +40,9 @@ void Macro::recordFrameFix(int frame, PlayerObject* p1, PlayerObject* p2) {
 
 bool Macro::flipControls() {
     PlayLayer* pl = PlayLayer::get();
-    if (!pl) return GameManager::get()->getGameVariable("0010");
+    if (!pl) return GameManager::get()->getGameVariable(GameVar::Flip2PlayerControls);
 
-    return pl->m_levelSettings->m_platformerMode ? false : GameManager::get()->getGameVariable("0010");
+    return pl->m_levelSettings->m_platformerMode ? false : GameManager::get()->getGameVariable(GameVar::Flip2PlayerControls);
 }
 
 void Macro::autoSave(GJGameLevel* level, int number) {

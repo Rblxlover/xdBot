@@ -159,19 +159,15 @@ bool Renderer::toggle() {
     }
     
     #ifdef GEODE_IS_WINDOWS
-    std::vector<std::string> incompatSettings;
     
-    if (GameManager::sharedState()->getGameVariable(GameVar::ClickBetweenSteps)) incompatSettings.push_back("Click Between Steps");
-    if (GameManager::sharedState()->getGameVariable(GameVar::ClickOnSteps)) incompatSettings.push_back("Click On Steps");
-    
-    if (!incompatSettings.empty()) {
-        geode::utils::StringBuffer incompatString;
-        
-        for (const std::string& name : incompatSettings) {
-            incompatString.append("<cr>{}</c>{}", name, (name != incompatSettings.back() ? "," : ""));
-            
-            FLAlertLayer::create("Render", "Disable incompatible GD settings to render a level: \n" + incompatString.str(), "OK")->show();
+    auto scene = CCScene::get();
+    if (GameManager::sharedState()->getGameVariable(GameVar::ClickBetweenSteps)) {
+        if (scene && !scene->getChildByID("render-alert"_spr)) {
+            auto alert = FLAlertLayer::create("Render", "Disable <cr>Click Between Steps</c> to render a level.", "OK");
+            alert->setID("render-alert"_spr);
+            alert->show();
         }
+        return false;
     }
     
     #endif

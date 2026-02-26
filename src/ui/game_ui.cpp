@@ -154,10 +154,10 @@ void Interface::updateButtons() {
     
     auto& g = Global::get();
     
-    #ifdef GEODE_IS_WINDOWS
-    bool isWindows = true;
+    #ifdef GEODE_IS_DESKTOP
+    bool isDesktop = true;
     #else
-    bool isWindows = false;
+    bool isDesktop = false;
     #endif
     
     CCNode* disableStepperBtn = menu->getChildByID("disable-stepper-btn");
@@ -209,7 +209,7 @@ void Interface::updateButtons() {
     size = sprite->getContentSize();
     speedhackBtn->setContentSize({ size.width * scale, size.height * scale });
     
-    if ((g.state != state::recording && !g.mod->getSavedValue<bool>("macro_always_show_buttons")) || isWindows) {
+    if ((g.state != state::recording && !g.mod->getSavedValue<bool>("macro_always_show_buttons")) || isDesktop) {
         disableStepperBtn->setVisible(false);
         stepFrameBtn->setVisible(false);
         speedhackBtn->setVisible(false);
