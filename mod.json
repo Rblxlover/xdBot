@@ -87,7 +87,6 @@
 			"description": "The keybind to open the xdBot menu.",
 			"type": "keybind",
 			"default": "Alt+F",
-			"platforms": ["win", "mac"],
 			"category": "universal",
 			"migrate-from": "zilko.xdbot/open_menu"
 		},
