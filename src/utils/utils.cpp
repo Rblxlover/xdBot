@@ -41,7 +41,6 @@ std::string Utils::narrow(const wchar_t *str) {
 #endif
 #endif
 
-  // ✅ Fallback return (fixes error)
   return "";
 }
 
@@ -80,7 +79,6 @@ std::wstring Utils::widen(const char *str) {
 #endif
 #endif
 
-  // ✅ Fallback return
   return L"";
 }
 
@@ -113,7 +111,6 @@ std::time_t Utils::getFileCreationTime(const std::filesystem::path &path) {
 
   return ull.QuadPart / 10000000ULL - 11644473600ULL;
 #else
-  // ✅ Safe fallback for other platforms
   return 0;
 #endif
 }

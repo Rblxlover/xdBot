@@ -521,5 +521,5 @@ $execute{
   
   g.macro.author = "N/A";
   g.macro.description = "N/A";
-  g.macro.gameVersion = GEODE_GD_VERSION;
+  g.macro.gameVersion = static_cast<int>(std::round(static_cast<double>(GEODE_GD_VERSION) * 1000.0));
 };

@@ -1,12 +1,12 @@
 {
-	"geode": "5.0.1",
+	"geode": "5.1.0",
 	"gd": {
 		"win": "2.2081",
 		"mac": "2.2081",
 		"android": "2.2081",
 		"ios": "2.2081"
 	},
-	"version": "2.4.1",
+	"version": "2.5.0",
 	"id": "zilko.xdbot",
 	"name": "xdBot",
 	"developer": "Zilko",
@@ -22,9 +22,16 @@
 			"default": "Frame Fixes",
 			"one-of": ["Vanilla", "Input Fixes", "Frame Fixes"]
 		},
+		"default_save_format": {
+			"type": "string",
+			"name": "Default Save Format",
+			"description": "Default format for saving macros.",
+			"default": "GDR2",
+			"one-of": ["GDR2", "GDR", "JSON"]
+		},
 		"frame_offset": {
 			"name": "Frame Offset",
-			"description": "Adds a frame offset when recording or playing macros",
+			"description": "Adds a frame offset when recording or playing macros.",
 			"type": "int", 
 			"default": 0,
 			"min": -8,

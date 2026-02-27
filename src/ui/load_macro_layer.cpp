@@ -149,7 +149,7 @@ LoadMacroLayer* LoadMacroLayer::create(geode::Popup* layer, geode::Popup* layer2
 void LoadMacroLayer::onImportMacro(CCObject*) {
 	if (isPickingFile) return;
 	file::FilePickOptions fileOptions;
-	fileOptions.filters.push_back({"Macro Files", { "*.gdr", "*.xd", "*.json" }});
+	fileOptions.filters.push_back({"Macro Files", { "*.gdr", "*.gdr2", "*.xd", "*.json" }});
 	auto weakThis = geode::WeakRef(this);
 	isPickingFile = true;
 	
@@ -177,7 +177,8 @@ void LoadMacroLayer::onImportMacro(CCObject*) {
 		} else {
 			auto dataRes = geode::utils::file::readBinary(path);
 			if (!dataRes) return;
-			tempMacro = Macro::importData(dataRes.unwrap());
+			auto data = dataRes.unwrap();
+			tempMacro = Macro::importData(data);
 		}
 		
 		std::string name = path.stem().string();
@@ -188,20 +189,26 @@ void LoadMacroLayer::onImportMacro(CCObject*) {
 		std::filesystem::path folder = Mod::get()->getSettingValue<std::filesystem::path>("macros_folder");
 		#endif
 		
-		std::filesystem::path finalPath = folder / (name + ".gdr.json");
+		// Save imported macros as GDR2 binary
+		std::filesystem::path finalPath = folder / (name + ".gdr2");
 		int iterations = 1;
 		while (std::filesystem::exists(finalPath)) {
-			finalPath = folder / fmt::format("{} ({}).gdr.json", name, iterations++);
+			finalPath = folder / fmt::format("{} ({}).gdr2", name, iterations++);
 		}
 		
-		if (geode::utils::file::writeBinary(finalPath, tempMacro.exportData(true))) {
-			self->reloadList(0);
-			
-			if (path.extension() == ".xd") {
-				FLAlertLayer::create("Warning", "Legacy .xd macros may be unstable.", "OK")->show();
+		auto exportResult = tempMacro.exportGDR2();
+		if (exportResult.isOk()) {
+			if (geode::utils::file::writeBinary(finalPath, exportResult.unwrap())) {
+				self->reloadList(0);
+				
+				if (path.extension() == ".xd") {
+					FLAlertLayer::create("Warning", "Legacy .xd macros may be unstable.", "OK")->show();
+				}
+				Notification::create("Macro Imported", NotificationIcon::Success)->show();
+				self->isPickingFile = false;
 			}
-			Notification::create("Macro Imported", NotificationIcon::Success)->show();
-			self->isPickingFile = false;
+		} else {
+			FLAlertLayer::create("Error", "Failed to export imported macro.", "OK")->show();
 		}
 	});
 }
@@ -417,7 +424,7 @@ void LoadMacroLayer::addList(bool refresh, float prevScroll) {
 	
 	for (int i = invertSort ? macros.size() - 1 : 0; invertSort ? i >= 0 : i < macros.size(); invertSort ? --i : ++i) {
 		
-		if (macros[i].extension() != ".gdr" && macros[i].extension() != ".xd" && macros[i].extension() != ".json") continue;
+		if (macros[i].extension() != ".gdr" && macros[i].extension() != ".gdr2" && macros[i].extension() != ".xd" && macros[i].extension() != ".json") continue;
 		
 		std::string name = geode::utils::string::pathToString(macros[i].filename()).substr(0, geode::utils::string::pathToString(macros[i].filename()).find_last_of('.'));
 		

@@ -4,6 +4,9 @@
 #include "gdr/gdr.hpp"
 #include "utils/utils.hpp"
 
+#include <gdr/gdr.hpp>
+#include <gdr_convert.hpp>
+
 using namespace geode::prelude;
 
 #define DIF(a, b) (std::fabs((a) - (b)) > 0.001f)
@@ -21,10 +24,16 @@ enum state {
     playing
 };
 
-struct input : gdr::Input {
+enum class SaveFormat {
+    GDR2,
+    GDR1,
+    JSON
+};
+
+struct input : gdr::Input<> {
     input() = default;
 
-    input(int frame, int button, bool player2, bool down)
+    input(uint64_t frame, uint8_t button, bool player2, bool down)
         : Input(frame, button, player2, down) {}
 
     bool operator==(const input& other) const {
@@ -33,11 +42,28 @@ struct input : gdr::Input {
                button == other.button &&
                down == other.down;
     }
+
+    bool operator<(const input& other) const {
+        return frame < other.frame;
+    }
+};
+
+struct legacy_input : gdr_legacy::Input {
+    legacy_input() = default;
+
+    legacy_input(int frame, int button, bool player2, bool down)
+        : Input(frame, button, player2, down) {}
+};
+
+struct LegacyMacro : gdr_legacy::Replay<LegacyMacro, legacy_input> {
+    LegacyMacro() : Replay("xdBot", xdBotVersion.c_str()) {}
 };
 
 struct Macro : gdr::Replay<Macro, input> {
 
-    Macro() : Replay("xdBot", xdBotVersion.c_str()) {}
+    Macro() : Replay("xdBot", 1) {
+        botInfo.name = "xdBot";
+    }
 
 public:
 
@@ -45,11 +71,36 @@ public:
     uintptr_t seed = 0;
     bool xdBotMacro = true;
 
+    std::vector<gdr_legacy::FrameFix> frameFixes;
+
+    bool shouldParseExtension() const override {
+        return botInfo.name == "xdBot";
+    }
+
+    void parseExtension(binary_reader& reader) override;
+    void saveExtension(binary_writer& writer) const override;
+
+    std::string getBotVersionString() const {
+        return xdBotVersion;
+    }
+
+    LegacyMacro toLegacy() const;
+
+    static Macro fromLegacy(const LegacyMacro& legacy);
+
+    gdr::Result<std::vector<uint8_t>> exportGDR2();
+
+    std::vector<uint8_t> exportGDR1();
+
+    std::vector<uint8_t> exportJSON();
+
+    static Macro importData(std::vector<uint8_t>& data);
+
     static void recordAction(int frame, int button, bool player2, bool hold);
 
     static void recordFrameFix(int frame, PlayerObject* p1, PlayerObject* p2);
 
-    static int save(std::string author, std::string desc, std::string path, bool json = false);
+    static int save(std::string author, std::string desc, std::string path, SaveFormat format = SaveFormat::GDR2);
 
     static void autoSave(GJGameLevel* level, int number);
 

@@ -86,7 +86,7 @@ void Macro::tryAutosave(GJGameLevel* level, CheckpointObject* cp) {
     std::string levelname = level->m_levelName;
     std::filesystem::path path = autoSavesPath / fmt::format("autosave_{}_{}", levelname, g.currentSession);
     std::error_code ec;
-    std::filesystem::remove(geode::utils::string::pathToString(path) + ".gdr", ec); // Remove previous save
+    std::filesystem::remove(geode::utils::string::pathToString(path) + ".gdr", ec);
     if (ec) log::warn("Failed to remove previous autosave");
 
     autoSave(level, g.currentSession);
@@ -103,7 +103,7 @@ void Macro::updateInfo(PlayLayer* pl) {
         g.macro.ldm = level->m_lowDetailModeToggled;
 
     int id = level->m_levelID.value();
-    if (id != g.macro.levelInfo.id)
+    if (static_cast<int>(g.macro.levelInfo.id) != id)
         g.macro.levelInfo.id = id;
 
     std::string name = level->m_levelName;
@@ -118,7 +118,7 @@ void Macro::updateInfo(PlayLayer* pl) {
         g.macro.author = "N/A";
 
     g.macro.botInfo.name = "xdBot";
-    g.macro.botInfo.version = xdBotVersion;
+    g.macro.botInfo.version = 1;
     g.macro.xdBotMacro = true;
 }
 
@@ -147,12 +147,167 @@ void Macro::updateTPS() {
     if (g.layer) static_cast<RecordLayer*>(g.layer)->updateTPS();
 }
 
-int Macro::save(std::string author, std::string desc, std::string path, bool json) {
+LegacyMacro Macro::toLegacy() const {
+    LegacyMacro legacy;
+    legacy.author = author;
+    legacy.description = description;
+    legacy.duration = duration;
+    legacy.gameVersion = static_cast<float>(gameVersion) / 1000.0f;
+    legacy.framerate = framerate;
+    legacy.seed = seed;
+    legacy.coins = coins;
+    legacy.ldm = ldm;
+    legacy.botInfo.name = botInfo.name;
+    legacy.botInfo.version = xdBotVersion;
+    legacy.levelInfo.id = levelInfo.id;
+    legacy.levelInfo.name = levelInfo.name;
+
+    for (const auto& inp : inputs) {
+        legacy.inputs.push_back(legacy_input(
+            static_cast<int>(inp.frame),
+            inp.button,
+            inp.player2,
+            inp.down
+        ));
+    }
+
+    legacy.frameFixes = frameFixes;
+
+    return legacy;
+}
+
+Macro Macro::fromLegacy(const LegacyMacro& legacy) {
+    Macro macro;
+    macro.author = legacy.author;
+    macro.description = legacy.description;
+    macro.duration = legacy.duration;
+    macro.gameVersion = static_cast<int>(std::round(legacy.gameVersion * 1000.0f));
+    macro.framerate = legacy.framerate;
+    macro.seed = legacy.seed;
+    macro.coins = legacy.coins;
+    macro.ldm = legacy.ldm;
+    macro.botInfo.name = legacy.botInfo.name;
+    macro.botInfo.version = 1;
+    macro.levelInfo.id = legacy.levelInfo.id;
+    macro.levelInfo.name = legacy.levelInfo.name;
+    macro.frameFixes = legacy.frameFixes;
+
+    for (const auto& inp : legacy.inputs) {
+        macro.inputs.push_back(input(
+            static_cast<uint64_t>(inp.frame),
+            static_cast<uint8_t>(inp.button),
+            inp.player2,
+            inp.down
+        ));
+    }
+
+    macro.xdBotMacro = legacy.botInfo.name == "xdBot";
+
+    return macro;
+}
+
+gdr::Result<std::vector<uint8_t>> Macro::exportGDR2() {
+    return gdr::Replay<Macro, input>::exportData();
+}
+
+std::vector<uint8_t> Macro::exportGDR1() {
+    LegacyMacro legacy = toLegacy();
+    return legacy.exportData(false);
+}
+
+std::vector<uint8_t> Macro::exportJSON() {
+    LegacyMacro legacy = toLegacy();
+    return legacy.exportData(true);
+}
+
+void Macro::saveExtension(binary_writer& writer) const {
+    writer << static_cast<uint64_t>(frameFixes.size());
+    
+    for (const auto& fix : frameFixes) {
+        writer << static_cast<uint64_t>(fix.frame);
+        writer << fix.p1.pos.x;
+        writer << fix.p1.pos.y;
+        writer << fix.p1.rotation;
+        writer << fix.p1.rotate;
+        writer << fix.p2.pos.x;
+        writer << fix.p2.pos.y;
+        writer << fix.p2.rotation;
+        writer << fix.p2.rotate;
+    }
+}
+
+void Macro::parseExtension(binary_reader& reader) {
+    uint64_t count = 0;
+    reader >> count;
+    
+    frameFixes.clear();
+    frameFixes.reserve(count);
+    
+    for (uint64_t i = 0; i < count; i++) {
+        gdr_legacy::FrameFix fix;
+        uint64_t frame = 0;
+        reader >> frame;
+        fix.frame = static_cast<int>(frame);
+        
+        reader >> fix.p1.pos.x;
+        reader >> fix.p1.pos.y;
+        reader >> fix.p1.rotation;
+        reader >> fix.p1.rotate;
+        reader >> fix.p2.pos.x;
+        reader >> fix.p2.pos.y;
+        reader >> fix.p2.rotation;
+        reader >> fix.p2.rotate;
+        
+        frameFixes.push_back(fix);
+    }
+}
+
+Macro Macro::importData(std::vector<uint8_t>& data) {
+    if (data.size() >= 3 && data[0] == 'G' && data[1] == 'D' && data[2] == 'R') {
+        std::span<uint8_t> span(data.data(), data.size());
+        auto result = gdr::Replay<Macro, input>::importData(span);
+        if (result.isOk()) {
+            Macro macro = std::move(result).unwrap();
+            macro.xdBotMacro = macro.botInfo.name == "xdBot";
+            return macro;
+        }
+        log::warn("GDR2 import failed: {}", result.unwrapErr());
+    }
+
+    {
+        std::span<uint8_t const> span(data.data(), data.size());
+        auto result = gdr::convert<Macro, input>(span);
+        if (result.isOk()) {
+            Macro macro = std::move(result).unwrap();
+            macro.xdBotMacro = macro.botInfo.name == "xdBot";
+            return macro;
+        }
+        log::warn("GDR converter import failed: {}", result.unwrapErr());
+    }
+
+    {
+        LegacyMacro legacy = LegacyMacro::importData(data);
+        if (!legacy.inputs.empty() || !legacy.botInfo.name.empty()) {
+            Macro macro = fromLegacy(legacy);
+            return macro;
+        }
+    }
+
+    log::error("Failed to import macro data in any format");
+    return Macro();
+}
+
+int Macro::save(std::string author, std::string desc, std::string path, SaveFormat format) {
     auto& g = Global::get();
 
     if (g.macro.inputs.empty()) return 31;
 
-    std::string extension = json ? ".gdr.json" : ".gdr";
+    std::string extension;
+    switch (format) {
+        case SaveFormat::GDR2: extension = ".gdr2"; break;
+        case SaveFormat::GDR1: extension = ".gdr"; break;
+        case SaveFormat::JSON: extension = ".gdr.json"; break;
+    }
 
     int iterations = 0;
 
@@ -180,7 +335,25 @@ int Macro::save(std::string author, std::string desc, std::string path, bool jso
     if (!f.is_open())
         return 20;
 
-    auto data = g.macro.exportData(json);
+    std::vector<uint8_t> data;
+
+    switch (format) {
+        case SaveFormat::GDR2: {
+            auto result = g.macro.exportGDR2();
+            if (result.isErr()) {
+                log::error("GDR2 export failed: {}", result.unwrapErr());
+                return 23;
+            }
+            data = std::move(result).unwrap();
+            break;
+        }
+        case SaveFormat::GDR1:
+            data = g.macro.exportGDR1();
+            break;
+        case SaveFormat::JSON:
+            data = g.macro.exportJSON();
+            break;
+    }
 
     if (data.empty())
         return 23;
@@ -212,7 +385,7 @@ Macro Macro::XDtoGDR(std::filesystem::path path) {
     Macro newMacro;
     newMacro.author = "N/A";
     newMacro.description = "N/A";
-    newMacro.gameVersion = GEODE_GD_VERSION;
+    newMacro.gameVersion = static_cast<int>(std::round(static_cast<double>(GEODE_GD_VERSION) * 1000.0));
 
     std::ifstream file(path, std::ios::binary);
     std::string line;
@@ -338,21 +511,6 @@ bool Macro::shouldStep() {
 
     if (g.stepFrame) return true;
     if (Global::getCurrentFrame() == 0) return true;
-
-    // if (g.ignoreFrame != -1) return true;
-    // if (g.ignoreJumpButton != -1) return true;
-
-    // if (g.delayedFrameReleaseMain[0] != -1) return true;
-    // if (g.delayedFrameReleaseMain[1] != -1) return true;
-
-    // if (g.delayedFrameInput[0] != -1) return true;
-    // if (g.delayedFrameInput[1] != -1) return true;
-
-    // for (int x = 0; x < 2; x++) {
-    //     for (int y = 0; y < 2; y++) {
-    //         if (g.delayedFrameRelease[x][y] != -1) return true;
-    //     }
-    // }
 
     return false;
 }

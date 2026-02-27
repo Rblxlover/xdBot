@@ -16,7 +16,7 @@ std::vector<std::string> splitByChar(std::string str, char splitChar);
 
 const std::string xdBotVersion = "v2.3.11";
 
-namespace gdr {
+namespace gdr_legacy {
 
 	using namespace nlohmann;
 
@@ -133,12 +133,6 @@ namespace gdr {
 				if (replayJson.is_discarded()) return replay;
 			}
 
-			// try {
-			// 	replayJson = json::from_msgpack(data);
-			// } catch(std::exception& e) {
-			// 	replayJson = json::parse(data);
-			// }
-
 			if (!replayJson["gameVersion"].is_null()) replay.gameVersion = replayJson["gameVersion"];
 			if (!replayJson["description"].is_null()) replay.description = replayJson["description"];
 			if (!replayJson["version"].is_null()) replay.version = replayJson["version"];
@@ -161,7 +155,6 @@ namespace gdr {
 			bool rotation = ver.find("beta.") == std::string::npos && ver.find("alpha.") == std::string::npos;
 			if (replay.botInfo.name == "xdBot" && ver == "v2.0.0") rotation = true;
 
-			// bool offset = false;
 			int offset = replay.botInfo.name == "xdBot" ? 1 : 0;
 
 			if (offset == 1) {
