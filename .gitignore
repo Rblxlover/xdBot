@@ -68,3 +68,6 @@ build-*/
 # CLion
 /cmake-build-*/
 build.sh
+
+eclipsemenu/
+ffmpeg-api/

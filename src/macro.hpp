@@ -56,7 +56,7 @@ struct legacy_input : gdr_legacy::Input {
 };
 
 struct LegacyMacro : gdr_legacy::Replay<LegacyMacro, legacy_input> {
-    LegacyMacro() : Replay("xdBot", xdBotVersion.c_str()) {}
+    LegacyMacro() : Replay("xdBot", getModVersionString()) {}
 };
 
 struct Macro : gdr::Replay<Macro, input> {
@@ -81,7 +81,7 @@ public:
     void saveExtension(binary_writer& writer) const override;
 
     std::string getBotVersionString() const {
-        return xdBotVersion;
+        return getModVersionString();
     }
 
     LegacyMacro toLegacy() const;

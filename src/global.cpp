@@ -403,7 +403,7 @@ $execute{
   g.mod->setSavedValue("render_video_args", std::string(""));
   
   if (!g.mod->setSavedValue("defaults_set_11", true))
-  g.mod->setSavedValue("render_codec", std::string("libx264"));
+  g.mod->setSavedValue("render_codec", std::string("h264_mediacodec"));
   
   #endif
   

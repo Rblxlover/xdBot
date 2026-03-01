@@ -118,7 +118,7 @@ void Macro::updateInfo(PlayLayer* pl) {
         g.macro.author = "N/A";
 
     g.macro.botInfo.name = "xdBot";
-    g.macro.botInfo.version = 1;
+    g.macro.botInfo.version = getModVersionInt();
     g.macro.xdBotMacro = true;
 }
 
@@ -158,7 +158,7 @@ LegacyMacro Macro::toLegacy() const {
     legacy.coins = coins;
     legacy.ldm = ldm;
     legacy.botInfo.name = botInfo.name;
-    legacy.botInfo.version = xdBotVersion;
+    legacy.botInfo.version = getModVersionString();
     legacy.levelInfo.id = levelInfo.id;
     legacy.levelInfo.name = levelInfo.name;
 
@@ -187,7 +187,7 @@ Macro Macro::fromLegacy(const LegacyMacro& legacy) {
     macro.coins = legacy.coins;
     macro.ldm = legacy.ldm;
     macro.botInfo.name = legacy.botInfo.name;
-    macro.botInfo.version = 1;
+    macro.botInfo.version = std::stoi(legacy.botInfo.version);
     macro.levelInfo.id = legacy.levelInfo.id;
     macro.levelInfo.name = legacy.levelInfo.name;
     macro.frameFixes = legacy.frameFixes;

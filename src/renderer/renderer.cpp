@@ -146,9 +146,15 @@ class $modify(CCScheduler) {
 };
 
 bool Renderer::shouldUseAPI() {
-    // ffmpeg api is not ported
-    return false;
-    
+    #ifdef GEODE_IS_WINDOWS
+    bool foundApi = Loader::get()->isModLoaded("eclipse.ffmpeg-api");
+    std::filesystem::path ffmpegPath = Mod::get()->getSettingValue<std::filesystem::path>("ffmpeg_path");
+    bool foundExe = std::filesystem::exists(ffmpegPath) && geode::utils::string::pathToString(ffmpegPath.filename()) == "ffmpeg.exe";
+
+    return !foundExe && foundApi;
+    #else
+    return true;
+    #endif
 }
 
 bool Renderer::toggle() {
@@ -176,7 +182,7 @@ bool Renderer::toggle() {
     std::filesystem::path ffmpegPath = Mod::get()->getSettingValue<std::filesystem::path>("ffmpeg_path");
     bool foundExe = std::filesystem::exists(ffmpegPath) && geode::utils::string::pathToString(ffmpegPath.filename()) == "ffmpeg.exe";
     
-    g.renderer.usingApi = false;
+    g.renderer.usingApi = Renderer::shouldUseAPI();
     
     if (g.renderer.recording || g.renderer.recordingAudio) {
         g.renderer.recordingAudio ? g.renderer.stopAudio() : g.renderer.stop(Global::getCurrentFrame());
@@ -201,8 +207,12 @@ bool Renderer::toggle() {
         
         g.renderer.ffmpegPath = geode::utils::string::pathToString(ffmpegPath);
         #else
-        FLAlertLayer::create("Error", "Rendering is not supported on this platform yet.", "OK")->show();
-        return false;
+        bool foundApi = Loader::get()->isModLoaded("eclipse.ffmpeg-api");
+        if (!foundApi) {
+            FLAlertLayer::create("Error", "FFmpeg API is required for rendering on this platform.", "OK")->show();
+            return false;
+        }
+        g.renderer.usingApi = true;
         #endif
         
         if (!PlayLayer::get()) {
@@ -239,7 +249,7 @@ void Renderer::start() {
     Mod* mod = Mod::get();
     fmod = FMODAudioEngine::sharedEngine();
     
-    fps = geode::utils::numFromString<int>(mod->getSavedValue<std::string>("render_fps")).unwrap();
+    fps = geode::utils::numFromString<int>(mod->getSavedValue<std::string>("render_fps")).unwrapOr(60);
     codec = mod->getSavedValue<std::string>("render_codec");
     bitrate = mod->getSavedValue<std::string>("render_bitrate") + "M";
     extraArgs = mod->getSavedValue<std::string>("render_args");

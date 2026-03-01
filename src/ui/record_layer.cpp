@@ -7,6 +7,7 @@
 #include "autoclicker_settings_layer.hpp"
 #include "trajectory_settings_layer.hpp"
 #include "mirror_settings_layer.hpp"
+#include "../gdr/gdr.hpp"
 #include "../hacks/coin_finder.hpp"
 #include "../hacks/show_trajectory.hpp"
 
@@ -260,17 +261,17 @@ class $modify(PauseLayer) {
     }
     
     void RecordLayer::toggleRender(CCObject* btn) {
-#ifdef GEODE_IS_WINDOWS
+        #ifdef GEODE_IS_WINDOWS
         if (!Renderer::toggle())
-            static_cast<CCMenuItemToggler*>(btn)->toggle(true);
-
+        static_cast<CCMenuItemToggler*>(btn)->toggle(true);
+        
         if (Global::get().renderer.recordingAudio)
-            static_cast<CCMenuItemToggler*>(btn)->toggle(false);
-#else
+        static_cast<CCMenuItemToggler*>(btn)->toggle(false);
+        #else
         toggleRender2(btn);
-#endif
+        #endif
     }
-
+    
     void RecordLayer::toggleRender2(CCObject* btn) {
         FLAlertLayer::create("Info", "Rendering is <cr>not supported</c> on your platform due to <cl>technical limitations</c>.", "OK")->show();
     }
@@ -520,7 +521,9 @@ class $modify(PauseLayer) {
     }
     
     void RecordLayer::showCodecPopup(CCObject*) {
+        #ifdef GEODE_IS_WINDOWS
         FLAlertLayer::create("Codec", "<cr>AMD:</c> h264_amf\n<cg>NVIDIA:</c> h264_nvenc\n<cl>INTEL:</c> h264_qsv\nI don't know: libx264", "OK")->show();
+        #endif
     }
     
     void RecordLayer::updateDots() {
@@ -586,7 +589,7 @@ class $modify(PauseLayer) {
         CCSprite* spriteOn = CCSprite::createWithSpriteFrameName("GJ_checkOn_001.png");
         CCSprite* spriteOff = CCSprite::createWithSpriteFrameName("GJ_checkOff_001.png");
         
-        CCLabelBMFont* versionLabel = CCLabelBMFont::create(("xdBot " + xdBotVersion).c_str(), "chatFont.fnt");
+        CCLabelBMFont* versionLabel = CCLabelBMFont::create(("xdBot " + getModVersionString()).c_str(), "chatFont.fnt");
         versionLabel->setOpacity(63);
         versionLabel->setPosition(ccp(-217, -125));
         versionLabel->setAnchorPoint({ 0, 0.5 });
@@ -913,12 +916,12 @@ class $modify(PauseLayer) {
                             bg->setZOrder(29);
                             menu->addChild(bg);
                             
-                            #ifdef GEODE_IS_WINDOWS
+                            #ifndef GEODE_IS_IOS
                             ButtonSprite* spriteOn2 = ButtonSprite::create("Stop");
                             spriteOn2->setScale(0.74f);
                             ButtonSprite* spriteOff2 = ButtonSprite::create("Start");
                             spriteOff2->setScale(0.74f);
-
+                            
                             renderToggle = CCMenuItemToggler::create(spriteOff2, spriteOn2, this, menu_selector(RecordLayer::toggleRender));
                             renderToggle->toggle(g.renderer.recording || g.renderer.recordingAudio);
                             renderToggle->setPosition(ccp(-65.5, -100));
@@ -928,7 +931,7 @@ class $modify(PauseLayer) {
                             spriteOn2->setScale(0.74f);
                             ButtonSprite* spriteOff2 = ButtonSprite::create("N/A");
                             spriteOff2->setScale(0.74f);
-
+                            
                             renderToggle = CCMenuItemToggler::create(spriteOn2, spriteOff2, this, menu_selector(RecordLayer::toggleRender2));
                             renderToggle->setPosition(ccp(-65.5, -100));
                             menu->addChild(renderToggle);
