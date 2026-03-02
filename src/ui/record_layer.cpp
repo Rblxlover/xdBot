@@ -917,7 +917,7 @@ class $modify(PauseLayer) {
                             bg->setZOrder(29);
                             menu->addChild(bg);
                             
-                            #ifndef GEODE_IS_IOS
+                            #ifdef GEODE_IS_WINDOWS
                             ButtonSprite* spriteOn2 = ButtonSprite::create("Stop");
                             spriteOn2->setScale(0.74f);
                             ButtonSprite* spriteOff2 = ButtonSprite::create("Start");
