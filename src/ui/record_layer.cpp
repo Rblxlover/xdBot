@@ -32,7 +32,7 @@ const std::vector<std::vector<RecordSetting>> settings {
         { "Auto Safe Mode:", "macro_auto_safe_mode", InputType::None }
     },
     {
-        #ifdef GEODE_IS_WINDOWS
+        #ifdef GEODE_IS_DESKTOP
         { "Force cursor on open:", "menu_show_cursor", InputType::None },
         { "Button on pause menu:", "menu_show_button", InputType::None },
         { "Pause on open:", "menu_pause_on_open", InputType::None },
@@ -148,10 +148,14 @@ class $modify(PauseLayer) {
             if (!pl->m_isPaused)
             pl->pauseGame(false);
         }
-        #ifdef GEODE_IS_WINDOWS
-        else if (pl && g.mod->getSavedValue<bool>("menu_show_cursor")) {
-            cursor = cocos2d::CCEGLView::sharedOpenGLView()->getShouldHideCursor();
-            cocos2d::CCEGLView::sharedOpenGLView()->showCursor(true);
+        #ifdef GEODE_IS_DESKTOP
+        else if (pl) {
+            bool value = g.mod->getSavedValue<bool>("menu_show_cursor");
+            auto gm = GameManager::sharedState();
+            
+            if (gm->getGameVariable(GameVar::ShowCursor) != value) {
+                gm->setGameVariable(GameVar::ShowCursor, value);
+            }
         }
         #endif
         
@@ -354,8 +358,7 @@ class $modify(PauseLayer) {
         if (tpsInput && node == tpsInput) {
             float value = geode::utils::numFromString<float>(tpsInput->getString()).unwrapOr(0.f);
             if (std::string_view(tpsInput->getString()) != "" && value < 999999 && value >= 0.f) {
-                mod->setSavedValue("macro_tps", value);
-                Global::get().tps = value;
+                Global::get().setTps(value);
                 Global::get().leftOver = 0.f;
             }
         }
@@ -402,7 +405,7 @@ class $modify(PauseLayer) {
         if (id == "clickbot_enabled") g.clickbotEnabled = value;
         if (id == "clickbot_playing_only") g.clickbotOnlyPlaying = value;
         if (id == "clickbot_holding_only") g.clickbotOnlyHolding = value;
-        if (id == "macro_tps_enabled") g.tpsEnabled = value;
+        if (id == "macro_tps_enabled") g.setTpsEnabled(value);
         if (id == "autoclicker_enabled") g.autoclicker = value;
         if (id == "disable_shaders") g.disableShaders = value;
         if (id == "macro_auto_save") g.autosaveEnabled = value;

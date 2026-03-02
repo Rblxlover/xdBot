@@ -9,6 +9,7 @@
 #include <queue>
 #include <cmath>
 #include <vector>
+#include <functional>
 
 #include "renderer/renderer.hpp"
 #include "macro.hpp"
@@ -137,6 +138,24 @@ public:
     bool stopPlaying = false;
     bool tpsEnabled = false;
     float tps = 240.f;
+    
+    // Callbacks for TPS settings changes (used instead of listenForSettingChanges)
+    std::function<void(bool)> onTpsEnabledChanged;
+    std::function<void(double)> onTpsChanged;
+    
+    // Setters that trigger callbacks
+    void setTpsEnabled(bool enabled) {
+        tpsEnabled = enabled;
+        mod->setSavedValue("macro_tps_enabled", enabled);
+        if (onTpsEnabledChanged) onTpsEnabledChanged(enabled);
+    }
+    
+    void setTps(float newTps) {
+        tps = newTps;
+        mod->setSavedValue("macro_tps", static_cast<double>(newTps));
+        if (onTpsChanged) onTpsChanged(static_cast<double>(newTps));
+    }
+    
     bool previousTpsEnabled = false;
     float previousTps = 0.f;
     bool autoclicker = false;

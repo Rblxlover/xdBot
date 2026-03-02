@@ -129,19 +129,14 @@ void Macro::updateTPS() {
         g.previousTpsEnabled = g.tpsEnabled;
         g.previousTps = g.tps;
 
-        g.tpsEnabled = g.macro.framerate != 240.f;
-        if (g.tpsEnabled) g.tps = g.macro.framerate;
-
-        g.mod->setSavedValue("macro_tps", g.tps);
-        g.mod->setSavedValue("macro_tps_enabled", g.tpsEnabled);
+        g.setTpsEnabled(g.macro.framerate != 240.f);
+        if (g.tpsEnabled) g.setTps(g.macro.framerate);
         
     }
     else if (g.previousTps != 0.f) {
-        g.tpsEnabled = g.previousTpsEnabled;
-        g.tps = g.previousTps;
+        g.setTpsEnabled(g.previousTpsEnabled);
+        g.setTps(g.previousTps);
         g.previousTps = 0.f;
-        g.mod->setSavedValue("macro_tps", g.tps);
-        g.mod->setSavedValue("macro_tps_enabled", g.tpsEnabled);
     }
 
     if (g.layer) static_cast<RecordLayer*>(g.layer)->updateTPS();

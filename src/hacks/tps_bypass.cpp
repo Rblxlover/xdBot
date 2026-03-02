@@ -1,66 +1,373 @@
 #include "../includes.hpp"
+#include "../utils/assembler.hpp"
+
 #include <Geode/modify/GJBaseGameLayer.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 
-class $modify(GJBaseGameLayer) {
+#include <sinaps.hpp>
 
-    void update(float dt) {
-        auto& g = Global::get();
+#ifdef GEODE_IS_WINDOWS
+#include <Psapi.h>
+#endif
 
-        if (!g.tpsEnabled) return GJBaseGameLayer::update(dt);
-        if (Global::getTPS() == 240.f) return GJBaseGameLayer::update(dt);
-        if (!PlayLayer::get()) return GJBaseGameLayer::update(dt);
+#ifdef GEODE_IS_MACOS
+#define REQUIRE_MODIFIED_DELTA_PATCH
+#elif defined(GEODE_IS_ANDROID)
+#include <dlfcn.h>
+#endif
+
+using TicksType =
+GEODE_WINDOWS(uint32_t)
+GEODE_ANDROID64(uint32_t)
+GEODE_ANDROID32(float)
+GEODE_IOS(float)
+GEODE_ARM_MAC(float)
+GEODE_INTEL_MAC(float);
+
+static TicksType g_expectedTicks = 0;
+#ifdef GEODE_IS_IOS
+// iOS launcher has a secret space to store data, and it's located at 0x8b8000
+// 8 bytes are reserved for geode itself, so we can just skip 8 bytes
+constexpr uintptr_t g_jitlessSpace = 0x8c4008; // omg boob :o
+static TicksType* g_expectedTicksPtr = &g_expectedTicks;
+
+TicksType& expectedTicks() { return *g_expectedTicksPtr; }
+#else
+TicksType& expectedTicks() { return g_expectedTicks; }
+#endif
+
+size_t getBaseSize() {
+    #ifdef GEODE_IS_WINDOWS
+    MODULEINFO info;
+    if (GetModuleInformation(GetCurrentProcess(), GetModuleHandle(nullptr), &info, sizeof(info))) {
+        return info.SizeOfImage;
+    }
+    #endif
+    return 0x8000000; // 128MB fallback
+}
+
+double getActualProgress(PlayLayer* pl) {
+    if (!pl->m_level) return 0.0;
+    if (pl->m_level->m_timestamp <= 0) return 0.0;
+    
+    double totalTime = pl->m_level->m_timestamp / 240.0;
+    if (totalTime == 0.0) return 0.0;
+    
+    return (pl->m_gameState.m_levelTime / totalTime) * 100.0;
+}
+
+#ifdef REQUIRE_MODIFIED_DELTA_PATCH
+
+// function to quickly get the bytes for the patch
+[[nodiscard]] static std::vector<uint8_t> TPStoBytes() {
+    return geode::toBytes<double>(1.0 / static_cast<double>(Global::get().getTPS()));
+}
+
+geode::Result<> setupModifiedDeltaPatches() {
+    auto base = reinterpret_cast<uint8_t*>(geode::base::get());
+    auto moduleSize = getBaseSize();
+    
+    using namespace sinaps::mask;
+    
+    #ifdef GEODE_IS_INTEL_MAC
+    // on x86, we need to replace two values that are used in GJBaseGameLayer::getModifiedDelta
+    // pretty simple, just find original values and replace them with raw bytes
+    // UPD 2.2081: float value is no longer there, so only patch double value
+    
+    auto addr = sinaps::find<qword<0x3F71111111111111>>(base, moduleSize);
+    if (addr == sinaps::not_found) {
+        return geode::Err("failed to find getModifiedDelta patch address");
+    }
+    
+    auto patchRes = geode::Mod::get()->patch(addr + base, TPStoBytes());
+    if (!patchRes) return geode::Err(fmt::format("failed to patch address: {}", patchRes.unwrapErr()));
+    auto patch = patchRes.unwrap();
+    (void) patch->disable();
+    
+    // update bytes on value change
+    Global::get().onTpsChanged = [patch](double) {
+        patch->updateBytes(TPStoBytes());
+    };
+
+    auto setState = [patch](bool state) { (void) patch->toggle(state); };
+    
+    #elif defined(GEODE_IS_ARM_MAC)
+    // on ARM, the value is stored as immediate, with some encoding:
+    // 0x0000000100122C54:  E9 E3 00 B2    orr  x9, xzr, #0x1111111111111111
+    // 0x0000000100122C58:  29 EE E7 F2    movk x9, #0x3f71, lsl #48
+    //
+    // this makes it kinda hard to inject any value we want, so instead we're going to store it
+    // in a GJBaseGameLayer member, load it with one instruction and then restore it in the closest hook
+    //
+    // i'm using `GJGameLoadingLayer* m_loadingLayer`, because it's not used anywhere apart from open/exit sequence,
+    // and should be fine for our use case. since it's a pointer, we can store double right in it
+    // (good luck whoever's going to dereference it lol)
+    
+    auto addr = sinaps::find<"E9 E3 00 B2 29 EE E7 F2">(base, moduleSize);
+    if (addr == sinaps::not_found) {
+        return geode::Err("failed to find getModifiedDelta patch address");
+    }
+    
+    using namespace assembler::arm64;
+    auto bytes = Builder(addr)
+    .ldr(Register::x9, Register::x19, offsetof(GJBaseGameLayer, m_loadingLayer))
+    .nop()
+    .build();
+    
+    auto patchRes = geode::Mod::get()->patch(addr + base, std::move(bytes));
+    if (!patchRes) return geode::Err(fmt::format("failed to patch address: {}", patchRes.unwrapErr()));
+    auto patch = patchRes.unwrap();
+    (void) patch->disable();
+    
+    auto setState = [patch](bool state) { (void) patch->toggle(state); };
+    #endif
+    
+    // update patches on enable/disable
+    Global::get().onTpsEnabledChanged = [setState](bool enabled) {
+        setState(enabled);
+    };
+    
+    // apply initial state
+    setState(Global::get().tpsEnabled);
+    
+    return geode::Ok();
+}
+#endif
+
+void applyPatches() {
+    #ifdef GEODE_IS_IOS
+    if (geode::Loader::get()->isPatchless()) {
+        using namespace assembler::arm64;
+        g_expectedTicksPtr = std::bit_cast<TicksType*>(geode::base::get() + g_jitlessSpace);
+        static_assert(GEODE_COMP_GD_VERSION == 22081, "TPS Bypass: JIT-less patch is only supported for GD 2.2081");
+        #define PATCH_ADDR 0x1fe724
+        GEODE_MOD_STATIC_PATCH(PATCH_ADDR, Builder()
+        .adrp(Register::x9, g_jitlessSpace - ((PATCH_ADDR >> 12) << 12))
+        .ldr(FloatRegister::s0, Register::x9, 0x8)
+        .pad_nops(40)
+        .build_array<40>());
+    } else {
+        // we can do normal patches with JIT
+        #endif
         
-        float newDt = 1.f / Global::getTPS();
-
-        if (g.frameStepper) return GJBaseGameLayer::update(newDt);
-
-        float realDt = dt + g.leftOver;
-        if (realDt > dt && newDt < dt) realDt = dt;
-
-        auto startTime = std::chrono::high_resolution_clock::now();
-        int mult = static_cast<int>(realDt / newDt);
-
-        for (int i = 0; i < mult; ++i) {
-            GJBaseGameLayer::update(newDt);
-            if (std::chrono::high_resolution_clock::now() - startTime > std::chrono::duration<double, std::milli>(16.666f)) {
-                mult = i + 1;
-                break;
+        auto base = reinterpret_cast<uint8_t*>(geode::base::get());
+        auto baseSize = getBaseSize();
+        
+        // this patch allows us to manually set the expected amount of ticks per update call
+        intptr_t addr = sinaps::not_found;
+        std::vector<uint8_t> bytes;
+        #ifdef GEODE_IS_WINDOWS
+        {
+            using namespace x86_64;
+            // 2.2074: 0x232294
+            // 2.2081: 0x237a55
+            addr = sinaps::find<"FF 90 ? ? ? ? ^ F3 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? 00 F3 41 0F 5D">(base, baseSize);
+            if (addr != sinaps::not_found) {
+                bytes = Builder(addr)
+                .movabs(x86_64::Register64::rax, std::bit_cast<uint64_t>(&g_expectedTicks))
+                .mov(Register32::r11d, Register64::rax)
+                .jmp(addr + 0x43, true)
+                .nop(4)
+                .build();
             }
         }
-
-        g.leftOver += (dt - newDt * mult);
-        
-    }
-
-    float getModifiedDelta(float dt) {
-        if (!Global::get().tpsEnabled) return GJBaseGameLayer::getModifiedDelta(dt);
-        if (Global::getTPS() == 240.f) return GJBaseGameLayer::getModifiedDelta(dt);
-        if (!PlayLayer::get()) return GJBaseGameLayer::getModifiedDelta(dt);
-
-        double dVar1;
-        float fVar2;
-        float fVar3;
-        double dVar4;
-
-        float newDt = 1.f / Global::getTPS();
-        
-        if (0 < m_resumeTimer) {
-            // cocos2d::CCDirector::sharedDirector();
-            m_resumeTimer--;
-            dt = 0.0;
+        #elif defined(GEODE_IS_ANDROID64)
+        {
+            using namespace arm64;
+            // 2.2074: 0x87dA40 (google) / 0x87be28 (amazon)
+            // 2.2081: 0x89d9f4
+            auto func = dlsym(RTLD_DEFAULT, "_ZN15GJBaseGameLayer6updateEf");
+            addr = sinaps::find<"AB 19 60 1E 0A 10 62 1E 6A 09 6A 1E">(static_cast<const uint8_t*>(func), 0x500);
+            if (addr != sinaps::not_found) {
+                addr += reinterpret_cast<intptr_t>(func) - reinterpret_cast<intptr_t>(base); // we need offset from the base
+                bytes = Builder(addr)
+                .mov(Register::x9, std::bit_cast<uint64_t>(&g_expectedTicks))
+                .ldr(Register::w0, Register::x9)
+                .b(addr + 0x28, true)
+                .build();
+            }
         }
-
-        fVar2 = 1.0;
-        if (m_gameState.m_timeWarp <= 1.0) {
-            fVar2 = m_gameState.m_timeWarp;
+        #elif defined(GEODE_IS_ANDROID32)
+        {
+            using namespace armv7;
+            // 2.2074: 0x4841bc (google) / 0x483f0c (amazon)
+            // 2.2081: 0x49725c
+            auto func = dlsym(RTLD_DEFAULT, "_ZN15GJBaseGameLayer6updateEf");
+            addr = sinaps::find<"EE ? ? ? EE ? ? ^ F7 EE ? 7B 17 EE 90 0A">(static_cast<const uint8_t*>(func), 0x500);
+            if (addr != sinaps::not_found) {
+                addr += reinterpret_cast<intptr_t>(func) - reinterpret_cast<intptr_t>(base); // we need offset from the base
+                bytes = Builder(addr)
+                .mov(Register::r1, std::bit_cast<uint32_t>(&g_expectedTicks))
+                .ldr_t(Register::r0, Register::r1)
+                .nop_t()
+                .build();
+            }
         }
+        #elif defined(GEODE_IS_IOS) || defined(GEODE_IS_ARM_MAC) // lucky me, they're virtually the same
+        {
+            using namespace arm64;
+            // 2.2074: 0x200c30 (iOS) / 0x119454 (macOS)
+            // 2.2081: 0x1fe724 (iOS) / 0x122d44 (macOS)
+            addr = sinaps::find<"01 10 2E 1E 00 20 21 1E 20 AC 20 1E">(base, baseSize);
+            if (addr != sinaps::not_found) {
+                bytes = Builder(addr)
+                .mov(Register::x9, std::bit_cast<uint64_t>(&g_expectedTicks))
+                .ldr(FloatRegister::s0, Register::x9)
+                .pad_nops(40) // we need to replace 40 bytes, but mov can take 3-4 instructions depending on address
+                .build();
+            }
+        }
+        #elif defined(GEODE_IS_INTEL_MAC)
+        {
+            using namespace x86_64;
+            // 2.2074: 0x14233e
+            // 2.2081: 0x1516c4
+            addr = sinaps::find<"0F 28 ? F3 0F 5D 83 ? ? ? ? F3 0F ? ? F2 0F 10">(base, baseSize);
+            if (addr != sinaps::not_found) {
+                bytes = Builder(addr)
+                .movabs(Register64::rax, std::bit_cast<uint64_t>(&g_expectedTicks))
+                .movss(XmmRegister::xmm0, Register64::rax)
+                .jmp(addr + 0x49, true)
+                .build();
+            }
+        }
+        #endif
+        
+        if (addr == sinaps::not_found || bytes.empty()) {
+            geode::log::error("TPS Bypass: Failed to find patch address or bytes");
+            return;
+        }
+        
+        geode::Patch* patch = nullptr;
+        if (auto res = geode::Mod::get()->patch(reinterpret_cast<void*>(addr + base), bytes)) {
+            patch = res.unwrap();
+            geode::log::info("TPS Bypass: Patch enabled at offset 0x{:X}", addr);
+        } else {
+            geode::log::error("TPS Bypass: Failed to patch GJBaseGameLayer::update: {}", res.unwrapErr());
+            return;
+        }
+        
+        // patch toggler
+        if (patch) {
+            // toggle the patch if enabled
+            Global::get().onTpsEnabledChanged = [patch](bool enabled) {
+                (void)patch->toggle(enabled);
+            };
+            
+            // set the initial state of the patch
+            (void)patch->toggle(Global::get().tpsEnabled);
+        }
+        
+        // on macOS, we also have to patch instructions in GJBaseGameLayer::getModifiedDelta because it's inlined
+        #ifdef REQUIRE_MODIFIED_DELTA_PATCH
+        auto res = setupModifiedDeltaPatches();
+        if (!res) {
+            geode::log::error("TPSBypass: {}", res.unwrapErr());
+        }
+        #endif
+        
+        #ifdef GEODE_IS_IOS
+    } // closes the `if (geode::Loader::get()->isPatchless()) { ... } else {` block
+    #endif
+}
 
-        dVar1 = dt + m_extraDelta;
-        fVar3 = std::round(dVar1 / (fVar2 * newDt));
-        dVar4 = fVar3 * fVar2 * newDt;
-        m_extraDelta = dVar1 - dVar4;
+$execute {
+    applyPatches();
+}
 
-        return dVar4;
+class $modify(TPSBypassGJBGLHook, GJBaseGameLayer) {
+    
+    struct Fields {
+        double m_extraDelta = 0.0;
+    };
+    
+    double getCustomDelta(float dt, double tps, bool applyExtraDelta = true) {
+        auto spt = 1.0 / tps;
+        
+        if (applyExtraDelta && m_resumeTimer > 0) {
+            --m_resumeTimer;
+            dt = 0.f;
+        }
+        
+        auto totalDelta = dt + m_fields->m_extraDelta;
+        auto timestep = std::min(m_gameState.m_timeWarp, 1.f) * spt;
+        auto steps = std::round(totalDelta / timestep);
+        auto newDelta = steps * timestep;
+        if (applyExtraDelta) m_fields->m_extraDelta = totalDelta - newDelta;
+        return newDelta;
     }
+    
+    #ifndef REQUIRE_MODIFIED_DELTA_PATCH
+    double getModifiedDelta(float dt) {
+        return getCustomDelta(dt, static_cast<double>(Global::get().getTPS()));
+    }
+    #endif
+    
+    void update(float dt) override {
+        auto fields = m_fields.self();
+        fields->m_extraDelta += dt;
+        
+        // calculate number of steps based on the new TPS
+        auto timeWarp = std::min(m_gameState.m_timeWarp, 1.f);
+        
+        auto newTPS = static_cast<double>(Global::get().getTPS()) / timeWarp;
+        
+        auto spt = 1.0 / newTPS;
+        auto steps = std::round(fields->m_extraDelta / spt);
+        auto totalDelta = steps * spt;
+        fields->m_extraDelta -= totalDelta;
+        expectedTicks() = static_cast<TicksType>(steps);
+        
+        #ifdef GEODE_IS_ARM_MAC
+        // we're a bit silly here:
+        auto originalLoadingLayer = m_loadingLayer;
+        this->m_loadingLayer = std::bit_cast<GJGameLoadingLayer*>(1.0 / static_cast<double>(Global::get().getTPS()));
+        #endif
+        
+        GJBaseGameLayer::update(totalDelta);
+        
+        #ifdef GEODE_IS_ARM_MAC
+        this->m_loadingLayer = originalLoadingLayer;
+        #endif
+    }
+};
 
+class $modify(TPSBypassPLHook, PlayLayer) {
+    
+    // we would like to fix the percentage calculation, which uses constant 240 TPS to determine the progress
+    int calculationFix() {
+        auto timestamp = m_level->m_timestamp;
+        auto currentProgress = m_gameState.m_currentProgress;
+        // this is only an issue for 2.2+ levels (with TPS greater than 240)
+        if (timestamp > 0 && Global::get().getTPS() != 240.f) {
+            // recalculate m_currentProgress based on the actual time passed
+            auto progress = getActualProgress(this);
+            m_gameState.m_currentProgress = timestamp * progress / 100.f;
+        }
+        return currentProgress;
+    }
+    
+    void updateProgressbar() {
+        auto currentProgress = calculationFix();
+        PlayLayer::updateProgressbar();
+        m_gameState.m_currentProgress = currentProgress;
+    }
+    
+    void destroyPlayer(PlayerObject* player, GameObject* object) override {
+        auto currentProgress = calculationFix();
+        PlayLayer::destroyPlayer(player, object);
+        m_gameState.m_currentProgress = currentProgress;
+    }
+    
+    void levelComplete() {
+        // levelComplete uses m_gameState.m_unkUint2 to store the timestamp
+        // also we can't rely on m_level->m_timestamp, because it might not be updated yet
+        auto oldTimestamp = m_gameState.m_commandIndex;
+        if (Global::get().getTPS() != 240.f) {
+            auto ticks = static_cast<uint32_t>(std::round(m_gameState.m_levelTime * 240));
+            m_gameState.m_commandIndex = ticks;
+        }
+        PlayLayer::levelComplete();
+        m_gameState.m_commandIndex = oldTimestamp;
+    }
 };
