@@ -228,7 +228,7 @@ class $modify(PauseLayer) {
         Macro::updateTPS();
         this->updateTPS();
         
-        g.lastAutoSaveMS = std::chrono::steady_clock::now();
+        g.lastAutoSaveMS = asp::time::Instant::now();
     }
     
     void RecordLayer::togglePlaying(CCObject*) {

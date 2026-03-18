@@ -54,6 +54,8 @@ class $modify(PlayLayer) {
     if (Mod::get()->getSettingValue<bool>("disable_speedhack") && Global::get().speedhackEnabled)
     Global::toggleSpeedhack();
     
+    Global::get().m_frameCount = 0;
+    
     PlayLayer::onQuit();
   }
   
@@ -117,8 +119,7 @@ class $modify(PlayLayer) {
     
     // Global::updateKeybinds();
     
-    auto now = std::chrono::system_clock::now();
-    g.currentSession = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    g.currentSession = asp::time::SystemTime::now().timeSinceEpoch().millis<u64>();
     g.lastAutoSaveFrame = 0;
     
     return true;
@@ -128,6 +129,8 @@ class $modify(PlayLayer) {
     PlayLayer::resetLevel();
     
     auto& g = Global::get();
+    
+    g.m_frameCount = 0;
     
     int frame = Global::getCurrentFrame();
     #ifdef GEODE_IS_WINDOWS
@@ -196,9 +199,23 @@ class $modify(BGLHook, GJBaseGameLayer) {
   
   struct Fields {
     bool macroInput = false;
+    bool isHalfTick = false;
+    bool isLastTick = false;
   };
+  
+  bool isInHalfTick() {
+    return m_fields->isHalfTick;
+  }
+  
+  bool isInLastTick() {
+    return m_fields->isLastTick;
+  }
+  
   #ifndef GEODE_IS_MACOS
   void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+    m_fields->isHalfTick = isHalfTick;
+    m_fields->isLastTick = isLastTick;
+    
     auto& g = Global::get();
     PlayLayer* pl = PlayLayer::get();
     
@@ -236,6 +253,8 @@ class $modify(BGLHook, GJBaseGameLayer) {
     }
     
     GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+    
+    if (isHalfTick) return;
     
     if (g.state == state::none)
     return;

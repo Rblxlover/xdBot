@@ -1,6 +1,7 @@
 #include "ui/record_layer.hpp"
 #include "ui/game_ui.hpp"
 
+#include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/CCTextInputNode.hpp>
 
 // #ifdef GEODE_IS_DESKTOP
@@ -205,7 +206,7 @@ float Global::getTPS() {
   return g.tpsEnabled ? g.tps : 240.f;
 }
 
-int Global::getCurrentFrame(bool editor) {
+/*int Global::getCurrentFrame(bool editor) {
   // double levelTime;
   PlayLayer* pl = PlayLayer::get();
   
@@ -231,27 +232,40 @@ int Global::getCurrentFrame(bool editor) {
   if (frame < 0) return 0;
   
   return frame;
+}*/
+
+int Global::getCurrentFrame(bool editor) {
+  auto& g = Global::get();
+  auto* pl = PlayLayer::get();
+  
+  if (pl && g.m_frameCount > 0) {
+    return g.m_frameCount - g.frameOffset;
+  }
+  
+  if (!pl) return 0;
+  
+  return pl->m_gameState.m_currentProgress - g.frameOffset;
 }
 
-// void Global::updateKeybinds() {
-// #ifdef GEODE_IS_DESKTOP
-
-//   auto& g = Global::get();
-//   for (size_t i = 0; i < 6; i++) {
-//     auto keys = keybinds::BindManager::get()->getBindsFor(buttonIDs[i]);
-//     std::vector<int> keysInts = {};
-
-//     for (size_t j = 0; j < keys.size(); j++) {
-//       keysInts.push_back(keys[j]->getHash());
-//       g.allKeybinds.insert(keys[j]->getHash());
-//     }
-
-//     g.keybinds[i].clear();
-//     for (int k = 0; k < keysInts.size(); k++)
-//       g.keybinds[i].push_back(keysInts[k]);
-//   }
-// #endif
-// }
+class $modify(FrameCounterGJBaseGameLayer, GJBaseGameLayer) {
+    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+        auto& g = Global::get();
+        auto* playLayer = PlayLayer::get();
+        bool isPlaying = playLayer && 
+            !playLayer->m_hasCompletedLevel &&
+            !playLayer->m_isPaused &&
+            playLayer->m_gameState.m_currentProgress > 0;
+        
+        g.m_isHalfTick = isHalfTick;
+        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+        
+        if (isPlaying && !isHalfTick) {
+            g.m_frameCount++;
+        }
+        
+        g.m_isHalfTick = false;
+    }
+};
 
 void Global::updateSeed(bool isRestart) {
     auto& g = Global::get();

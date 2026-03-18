@@ -127,12 +127,12 @@ class $modify(CCScheduler) {
         
         float newDt = 1.f / Global::getTPS();
         
-        auto startTime = std::chrono::high_resolution_clock::now();
+        auto startTime = asp::time::Instant::now();
         int mult = static_cast<int>((dt + leftOver) / newDt);
         
         for (int i = 0; i < mult; ++i) {
             CCScheduler::update(newDt);
-            if (std::chrono::high_resolution_clock::now() - startTime > 33.333ms) {
+            if (asp::time::Instant::now(); - startTime > 33.333ms) {
                 mult = i + 1;
                 break;
             }
@@ -253,9 +253,8 @@ void Renderer::start() {
     if (mod->getSavedValue<bool>("render_only_song")) audioMode = AudioMode::Song;
     if (mod->getSavedValue<bool>("render_record_audio")) audioMode = AudioMode::Record;
     
-    auto now = std::chrono::system_clock::now();
-    auto duration = now.time_since_epoch();
-    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    auto now = asp::time::SystemTime::now();
+    auto timestamp = now.timeSinceEpoch().millis<u64>();
     
     std::string filename = fmt::format("render_{}_{}{}", std::string_view(pl->m_level->m_levelName), geode::utils::numToString(timestamp), extension);
     #ifdef GEODE_IS_IOS
@@ -326,7 +325,7 @@ void Renderer::start() {
         )->show();
     }
     
-    std::thread([&, path, songFile, songOffset, fadeIn, fadeOut, extension, bitrateApi, settings]() {
+    async::runtime().spawnBlocking<void>([this, path, songFile, songOffset, fadeIn, fadeOut, extension, bitrateApi, settings]() {
         if (!codec.empty()) codec = "-c:v " + codec + " ";
         if (!bitrate.empty()) bitrate = "-b:v " + bitrate + " ";
         if (extraArgs.empty()) extraArgs = "-pix_fmt yuv420p";
@@ -430,7 +429,7 @@ void Renderer::start() {
         Loader::get()->queueInMainThread([] {
             Notification::create("Saving Render...", NotificationIcon::Loading)->show();
         });
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        asp::sleep(asp::Duration::fromMillis(100))
         
         if ((SFXVolume == 0.f && musicVolume == 0.f) || audioMode == AudioMode::Off || (audioMode == AudioMode::Song && !std::filesystem::exists(songFile)) || (audioMode == AudioMode::Record && !std::filesystem::exists("fmodoutput.wav"))) {
             if (audioMode != AudioMode::Off) {
@@ -438,7 +437,7 @@ void Renderer::start() {
                     FLAlertLayer::create("Error", "Song File not found.", "OK")->show();
                 });
                 
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                asp::sleep(asp::Duration::fromMillis(100))
             }
             
             Loader::get()->queueInMainThread([] {
@@ -574,7 +573,7 @@ void Renderer::start() {
             Notification::create("Render Saved With Audio", NotificationIcon::Success)->show();
         });
         
-    }).detach();
+    });
 }
 
 void Renderer::stop(int frame) {

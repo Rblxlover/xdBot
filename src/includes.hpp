@@ -103,7 +103,7 @@ public:
     std::vector<int> keybinds[6];
 
     int lastAutoSaveFrame = 0;
-    std::chrono::time_point<std::chrono::steady_clock> lastAutoSaveMS = std::chrono::steady_clock::now();
+    asp::Instant lastAutoSaveMS = asp::Instant::now();
     int currentSession = 0;
 
     bool stepFrame = false;
@@ -183,6 +183,9 @@ public:
     int ignoreJumpButton = -1;
     int frameOffset = 0;
     int previousFrame = 0;
+    
+    int m_frameCount = 0;
+    bool m_isHalfTick = false;
 
     size_t currentAction = 0;
     size_t currentFrameFix = 0;
