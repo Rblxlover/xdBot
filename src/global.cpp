@@ -107,7 +107,6 @@ bool Global::hasIncompatibleMods() {
             settingsToDisable.push_back("<cr>Physics Bypass (Eclipse Menu)</c>");
           }
         }
-        modsToDisable.push_back(mod->getName());
       }
     }
   }
