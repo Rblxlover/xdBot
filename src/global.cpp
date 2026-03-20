@@ -103,7 +103,7 @@ bool Global::hasIncompatibleMods() {
       if (jsonResult) {
         auto jsonData = jsonResult.unwrap();
         if (jsonData.contains("global.tpsbypass.toggle")) {
-          if (jsonData["global.tpsbypass.toggle"].asBool()) {
+          if (jsonData["global.tpsbypass.toggle"].asBool().unwrapOr(false)) {
             settingsToDisable.push_back("<cr>Physics Bypass (Eclipse Menu)</c>");
           }
         }
