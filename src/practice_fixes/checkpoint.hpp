@@ -63,8 +63,10 @@ struct SupplementalPlayerState {
         m_holdingLeft           = p->m_holdingLeft;
         m_leftPressedFirst      = p->m_leftPressedFirst;
         m_holdingButtons        = p->m_holdingButtons;
+        #ifndef GEODE_IS_ANDROID
         m_rotateObjectsRelated  = p->m_rotateObjectsRelated;
-        m_potentialSlopeMap = p->m_potentialSlopeMap;
+        m_potentialSlopeMap     = p->m_potentialSlopeMap;
+        #endif
     }
 
     void apply(PlayerObject* p) const {
