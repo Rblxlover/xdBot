@@ -2,26 +2,24 @@
 #include "practice_fixes.hpp"
 #include <Geode/modify/PlayLayer.hpp>
 
-class PracticeCheckpointData {
-public:
+struct PracticeCheckpointData {
+    SupplementalPlayerState    p1, p2;
+    SupplementalPlayLayerState pl;
+    
     PracticeCheckpointData() = default;
-    PracticeCheckpointData(PlayerObject* p1, PlayerObject* p2, PlayLayer* pl) {
-        if (!pl || !p1) return;
-        m_checkpointPlayLayer = FixPlayLayerCheckpoint(pl);
-        m_checkpointPlayer1 = FixPlayerCheckpoint(p1);
-        if (p2) m_checkpointPlayer2 = FixPlayerCheckpoint(p2);
+    PracticeCheckpointData(PlayerObject* p1Obj, PlayerObject* p2Obj, PlayLayer* plObj) {
+        if (!plObj || !p1Obj) return;
+        pl = SupplementalPlayLayerState(plObj);
+        p1 = SupplementalPlayerState(p1Obj);
+        if (p2Obj) p2 = SupplementalPlayerState(p2Obj);
     }
-
-    void apply(PlayerObject* p1, PlayerObject* p2, PlayLayer* pl) {
-        if (!pl) return;
-        m_checkpointPlayLayer.apply(pl);
-        if (p1) m_checkpointPlayer1.apply(p1);
-        if (p2) m_checkpointPlayer2.apply(p2);
+    
+    void apply(PlayerObject* p1Obj, PlayerObject* p2Obj, PlayLayer* plObj) const {
+        if (!plObj) return;
+        pl.apply(plObj);
+        if (p1Obj) p1.apply(p1Obj);
+        if (p2Obj) p2.apply(p2Obj);
     }
-
-private:
-    FixPlayerCheckpoint m_checkpointPlayer1, m_checkpointPlayer2;
-    FixPlayLayerCheckpoint m_checkpointPlayLayer;
 };
 
 class $modify(FixPlayLayer, PlayLayer) {
@@ -33,52 +31,97 @@ class $modify(FixPlayLayer, PlayLayer) {
     };
     
     void loadFromCheckpoint(CheckpointObject* checkpoint) {
+        bool shouldFix = PracticeFix::shouldEnable();
+        
+        if (shouldFix) {
+            if (m_player1) m_player1->m_isDashing = false;
+            if (m_gameState.m_isDualMode && m_player2) m_player2->m_isDashing = false;
+        }
+        
         PlayLayer::loadFromCheckpoint(checkpoint);
-
-        if (PracticeFix::shouldEnable()) {
-            auto fields = m_fields.self();
-            if (fields->m_checkpoints.contains(checkpoint)) {
-                auto& data = fields->m_checkpoints[checkpoint];
-                data.apply(m_player1, m_gameState.m_isDualMode ? m_player2 : nullptr, this);
+        
+        auto* fields = m_fields.self();
+        
+        if (shouldFix) {
+            auto it = fields->m_checkpoints.find(checkpoint);
+            if (it != fields->m_checkpoints.end()) {
+                it->second.apply(
+                    m_player1,
+                    m_gameState.m_isDualMode ? m_player2 : nullptr,
+                    this
+                );
             }
-
-            auto& g = Global::get();
-            if (g.state == state::recording && fields->m_checkpointInputs.contains(checkpoint)) {
+        }
+        
+        auto& g = Global::get();
+        if (g.state == state::recording || g.state == state::playing) {
+            auto inputIt = fields->m_checkpointInputs.find(checkpoint);
+            if (inputIt != fields->m_checkpointInputs.end()) {
                 g.ignoreRecordAction = true;
-                g.macro.inputs = fields->m_checkpointInputs[checkpoint];
-                g.macro.frameFixes = fields->m_checkpointFrameFixes[checkpoint];
+                g.macro.inputs = inputIt->second;
+                auto fixIt = fields->m_checkpointFrameFixes.find(checkpoint);
+                if (fixIt != fields->m_checkpointFrameFixes.end())
+                    g.macro.frameFixes = fixIt->second;
+                
+                auto frameIt = fields->m_checkpointFrames.find(checkpoint);
+                if (frameIt != fields->m_checkpointFrames.end()) {
+                    g.m_frameCount = frameIt->second;
+                }
                 g.ignoreRecordAction = false;
             }
         }
     }
     
     CheckpointObject* createCheckpoint() {
-        auto checkpoint = PlayLayer::createCheckpoint();
-        if (!checkpoint || !PracticeFix::shouldEnable()) return checkpoint;
+        auto* checkpoint = PlayLayer::createCheckpoint();
+        if (!checkpoint) return checkpoint;
         
-        PracticeCheckpointData data(m_player1, m_gameState.m_isDualMode ? m_player2 : nullptr, this);
-        m_fields->m_checkpoints[checkpoint] = data;
-
+        bool shouldFix = PracticeFix::shouldEnable();
+        if (shouldFix) {
+            auto* fields = m_fields.self();
+            fields->m_checkpoints[checkpoint] = PracticeCheckpointData(
+                m_player1,
+                m_gameState.m_isDualMode ? m_player2 : nullptr,
+                this
+            );
+        }
+        
         auto& g = Global::get();
-        if (g.state == state::recording) {
+        if (g.state == state::recording || g.state == state::playing) {
+            auto* fields = m_fields.self();
             g.ignoreRecordAction = true;
-            m_fields->m_checkpointInputs[checkpoint] = g.macro.inputs;
-            m_fields->m_checkpointFrameFixes[checkpoint] = g.macro.frameFixes;
-            m_fields->m_checkpointFrames[checkpoint] = Global::getCurrentFrame();
+            fields->m_checkpointInputs[checkpoint]     = g.macro.inputs;
+            fields->m_checkpointFrameFixes[checkpoint] = g.macro.frameFixes;
+            fields->m_checkpointFrames[checkpoint]     = Global::getCurrentFrame();
             g.ignoreRecordAction = false;
         }
         
         return checkpoint;
     }
-
+    
+    void removeCheckpoint(CheckpointObject* checkpoint) {
+        PlayLayer::removeCheckpoint(checkpoint);
+        
+        auto* fields = m_fields.self();
+        fields->m_checkpoints.erase(checkpoint);
+        fields->m_checkpointInputs.erase(checkpoint);
+        fields->m_checkpointFrameFixes.erase(checkpoint);
+        fields->m_checkpointFrames.erase(checkpoint);
+    }
+    
     void resetLevel() {
-        if (m_checkpointArray->count() <= 0) {
-            m_fields->m_checkpoints.clear();
-            m_fields->m_checkpointInputs.clear();
-            m_fields->m_checkpointFrameFixes.clear();
-            m_fields->m_checkpointFrames.clear();
+        bool hadCheckpoints = m_checkpointArray->count() > 0;
+        
+        if (!hadCheckpoints) {
+            auto* fields = m_fields.self();
+            fields->m_checkpoints.clear();
+            fields->m_checkpointInputs.clear();
+            fields->m_checkpointFrameFixes.clear();
+            fields->m_checkpointFrames.clear();
         }
+        
         PlayLayer::resetLevel();
-        if (m_checkpointArray->count() > 0) m_resumeTimer = 0;
+        
+        if (hadCheckpoints) m_resumeTimer = 0;
     }
 };

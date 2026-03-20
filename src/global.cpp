@@ -35,7 +35,7 @@ struct IncompatibleMod {
 const std::vector<IncompatibleMod> incompatibleMods {
   { "syzzi.click_between_frames", true, { {"soft-toggle", false, true }, { "actual-delta", true } } },
   { "alphalaneous.click_after_frames", true, { { "soft-toggle", false, true } } },
-  { "thesillydoggo.qolmod", true, { { "tps-bypass_enabled", true, false, true } } },
+  { "thesillydoggo.qolmod", true, { { "tps-bypass_enabled", true, false, true } } }
   // { "zmx.cbf-lite", false, {  } }
 };
 
@@ -61,15 +61,13 @@ bool Global::hasIncompatibleMods() {
   
   if (Mod* mod = Loader::get()->getLoadedMod("tobyadd.gdh")) {
     std::filesystem::path configPath = mod->getSaveDir() / "config.json";
-    using namespace nlohmann;
     
     if (std::filesystem::exists(configPath)) {
-      std::ifstream jsonFile(configPath);
-      if (jsonFile.is_open()) {
-        json jsonData;
-        jsonFile >> jsonData;
+      auto jsonResult = geode::utils::file::readJson(configPath);
+      if (jsonResult) {
+        auto jsonData = jsonResult.unwrap();
         if (jsonData.contains("tps_enabled")) {
-          if (jsonData["tps_enabled"])
+          if (jsonData["tps_enabled"].asBool())
           settingsToDisable.push_back("<cr>TPS Bypass (GDH)</c>");
         }
       }
@@ -80,15 +78,13 @@ bool Global::hasIncompatibleMods() {
   
   if (Mod* mod = Loader::get()->getLoadedMod("tobyadd.gdh_mobile")) {
     std::filesystem::path configPath = mod->getSaveDir() / "config.json";
-    using namespace nlohmann;
     
     if (std::filesystem::exists(configPath)) {
-      std::ifstream jsonFile(configPath);
-      if (jsonFile.is_open()) {
-        json jsonData;
-        jsonFile >> jsonData;
+      auto jsonResult = geode::utils::file::readJson(configPath);
+      if (jsonResult) {
+        auto jsonData = jsonResult.unwrap();
         if (jsonData.contains("fps_value")) {
-          if (jsonData["fps_value"] != 240)
+          if (jsonData["fps_value"].asDouble() != 240)
           settingsToDisable.push_back("<cr>TPS Bypass (GDH)</c>");
         }
       }
@@ -96,6 +92,23 @@ bool Global::hasIncompatibleMods() {
   }
   
   #endif
+  
+  if (Mod* mod = Loader::get()->getLoadedMod("eclipse.eclipse-menu")) {
+    std::filesystem::path configPath = mod->getSaveDir() / "config.json";
+    
+    if (std::filesystem::exists(configPath)) {
+      auto jsonResult = geode::utils::file::readJson(configPath);
+      if (jsonResult) {
+        auto jsonData = jsonResult.unwrap();
+        if (jsonData.contains("global.tpsbypass.toggle")) {
+          if (jsonData["global.tpsbypass.toggle"].asBool()) {
+            settingsToDisable.push_back("<cr>Physics Bypass (Eclipse Menu)</c>");
+          }
+        }
+        modsToDisable.push_back(mod->getName());
+      }
+    }
+  }
   
   for (IncompatibleMod incompatMod : incompatibleMods) {
     Mod* mod = Loader::get()->getLoadedMod(incompatMod.ID);

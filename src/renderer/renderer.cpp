@@ -132,7 +132,7 @@ class $modify(CCScheduler) {
         
         for (int i = 0; i < mult; ++i) {
             CCScheduler::update(newDt);
-            if (asp::time::Instant::now(); - startTime > 33.333ms) {
+            if (startTime.elapsed() > asp::time::Duration::fromMillis(33)) {
                 mult = i + 1;
                 break;
             }
@@ -254,7 +254,7 @@ void Renderer::start() {
     if (mod->getSavedValue<bool>("render_record_audio")) audioMode = AudioMode::Record;
     
     auto now = asp::time::SystemTime::now();
-    auto timestamp = now.timeSinceEpoch().millis<u64>();
+    auto timestamp = now.timeSinceEpoch().millis();
     
     std::string filename = fmt::format("render_{}_{}{}", std::string_view(pl->m_level->m_levelName), geode::utils::numToString(timestamp), extension);
     #ifdef GEODE_IS_IOS
@@ -429,7 +429,7 @@ void Renderer::start() {
         Loader::get()->queueInMainThread([] {
             Notification::create("Saving Render...", NotificationIcon::Loading)->show();
         });
-        asp::sleep(asp::Duration::fromMillis(100))
+        asp::sleep(asp::Duration::fromMillis(100));
         
         if ((SFXVolume == 0.f && musicVolume == 0.f) || audioMode == AudioMode::Off || (audioMode == AudioMode::Song && !std::filesystem::exists(songFile)) || (audioMode == AudioMode::Record && !std::filesystem::exists("fmodoutput.wav"))) {
             if (audioMode != AudioMode::Off) {
@@ -437,7 +437,7 @@ void Renderer::start() {
                     FLAlertLayer::create("Error", "Song File not found.", "OK")->show();
                 });
                 
-                asp::sleep(asp::Duration::fromMillis(100))
+                asp::sleep(asp::Duration::fromMillis(100));
             }
             
             Loader::get()->queueInMainThread([] {
@@ -553,11 +553,11 @@ void Renderer::start() {
         }
         
         std::error_code ec;
-        std::filesystem::remove(Utils::widen(path), ec);
+        std::filesystem::remove(path, ec);
         if (ec) log::warn("Failed to remove old render file.");
         else {
             ec.clear();
-            std::filesystem::rename(tempPath, Utils::widen(path), ec);
+            std::filesystem::rename(tempPath, path, ec);
             if (ec) log::warn("Failed to rename temp render file.");
         }
         

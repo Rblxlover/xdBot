@@ -104,7 +104,7 @@ class $modify(PlayLayer) {
             return;
         }
         g.autosaveCheck = 0.f;
-        int currentTime = asp::time::SystemTime::now().timeSinceEpoch().millis<u64>();
+        int currentTime = asp::time::SystemTime::now().timeSinceEpoch().millis();
 
         Macro::autoSave(m_level, currentTime);
     }

@@ -55,7 +55,7 @@ void LoadMacroLayer::open(geode::Popup* layer, geode::Popup* layer2, bool autosa
 }
 
 void LoadMacroLayer::textChanged(CCTextInputNode* node) {
-	search = Utils::toLower(node->getString());
+	search = geode::utils::string::toLower(node->getString());
 	if (search != "") {
 		searchOff->setVisible(true);
 		searchOff->setOpacity(184);
@@ -430,13 +430,11 @@ void LoadMacroLayer::addList(bool refresh, float prevScroll) {
 		if (macros[i].extension() == ".json")
 		name = name.substr(0, name.find_last_of('.'));
 		
-		if (Utils::toLower(name).find(search) == std::string::npos && search != "") continue;
+		if (geode::utils::string::toLower(name).find(search) == std::string::npos && search != "") continue;
 		
 		std::time_t date;
 		
-		#ifdef GEODE_IS_WINDOWS
 		date = Utils::getFileCreationTime(macros[i]);
-		#endif
 		
 		MacroCell* cell = MacroCell::create(macros[i], name, date, menuLayer, mergeLayer, static_cast<CCLayer*>(this));
 		cells->addObject(cell);
@@ -684,18 +682,15 @@ void MacroCell::handleLoad() {
 		g.macro = oldMacro;
 	}
 	else {
-		std::ifstream f(geode::utils::string::pathToString(path), std::ios::binary);
+		auto readResult = geode::utils::file::readBinary(path);
+		if (readResult.isErr()) {
+			if (!isMerge)
+				return FLAlertLayer::create("Error", "There was an error loading this macro. ID: 45", "OK")->show();
+			else
+				return;
+		}
 		
-		f.seekg(0, std::ios::end);
-		size_t fileSize = f.tellg();
-		f.seekg(0, std::ios::beg);
-		
-		std::vector<std::uint8_t> macroData(fileSize);
-		
-		f.read(reinterpret_cast<char*>(macroData.data()), fileSize);
-		f.close();
-		
-		newMacro = Macro::importData(macroData);
+		newMacro = Macro::importData(readResult.unwrap());
 	}
 	
 	if (isMerge) {

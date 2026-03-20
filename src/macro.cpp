@@ -325,11 +325,6 @@ int Macro::save(std::string author, std::string desc, std::string path, SaveForm
     g.macro.description = desc;
     g.macro.duration = g.macro.inputs.back().frame / g.macro.framerate;
 
-    std::ofstream f(path, std::ios::binary);
-
-    if (!f.is_open())
-        return 20;
-
     std::vector<uint8_t> data;
 
     switch (format) {
@@ -353,14 +348,11 @@ int Macro::save(std::string author, std::string desc, std::string path, SaveForm
     if (data.empty())
         return 23;
 
-    f.write(reinterpret_cast<const char*>(data.data()), data.size());
-
-    if (!f.good()) {
-        f.close();
-        return 21;
+    auto writeResult = geode::utils::file::writeBinary(path, data);
+    if (writeResult.isErr()) {
+        log::error("Failed to write file: {}", writeResult.unwrapErr());
+        return 20;
     }
-
-    f.close();
 
     return 0;
 }
@@ -382,13 +374,15 @@ Macro Macro::XDtoGDR(std::filesystem::path path) {
     newMacro.description = "N/A";
     newMacro.gameVersion = static_cast<int>(std::round(static_cast<double>(GEODE_GD_VERSION) * 1000.0));
 
-    std::ifstream file(path, std::ios::binary);
-    std::string line;
-
-    if (!file.is_open()) {
+    auto readResult = geode::utils::file::readString(path);
+    if (readResult.isErr()) {
         newMacro.description = "fail";
         return newMacro;
     }
+
+    std::string content = readResult.unwrap();
+    std::istringstream file(content);
+    std::string line;
 
     bool firstIt = true;
     bool andr = false;
@@ -429,8 +423,6 @@ Macro Macro::XDtoGDR(std::filesystem::path path) {
             newMacro.frameFixes.push_back({ frame, {p1Pos, 0.f, false}, {p2Pos, 0.f, false} });
         }
     }
-
-    file.close();
 
     return newMacro;
 

@@ -22,7 +22,6 @@ geode::prelude::VersionInfo getVersion(std::vector<std::string> nums);
 
 cocos2d::CCPoint dataFromString(std::string dataString);
 
-std::vector<std::string> splitByChar(std::string str, char splitChar);
 
 namespace gdr_legacy {
 
@@ -168,7 +167,7 @@ namespace gdr_legacy {
 			if (offset == 1) {
 				if (ver.front() == 'v') ver = ver.substr(1);
 
-				std::vector<std::string> splitVer = splitByChar(ver, '.');
+				std::vector<std::string> splitVer = geode::utils::string::split(ver, ".");
 
 				if (splitVer.size() <= 3) {
 					std::vector<std::string> realVer = {"2", "3", "6"};

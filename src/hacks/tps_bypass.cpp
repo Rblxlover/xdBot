@@ -137,6 +137,7 @@ geode::Result<> setupModifiedDeltaPatches() {
 #endif
 
 void applyPatches() {
+    
     #ifdef GEODE_IS_IOS
     if (geode::Loader::get()->isPatchless()) {
         using namespace arm64;
@@ -236,7 +237,8 @@ void applyPatches() {
         #endif
         
         if (addr == sinaps::not_found || bytes.empty()) {
-            geode::log::error("TPS Bypass: Failed to find patch address or bytes");
+            geode::log::error("TPS Bypass: Failed to find patch address or bytes (possibly already patched)");
+            Global::get().setTpsEnabled(false);
             return;
         }
         
@@ -246,6 +248,7 @@ void applyPatches() {
             geode::log::info("TPS Bypass: Patch enabled at offset 0x{:X}", addr);
         } else {
             geode::log::error("TPS Bypass: Failed to patch GJBaseGameLayer::update: {}", res.unwrapErr());
+            Global::get().setTpsEnabled(false);
             return;
         }
         

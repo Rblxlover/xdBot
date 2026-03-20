@@ -119,23 +119,29 @@ class $modify(PlayLayer) {
     
     // Global::updateKeybinds();
     
-    g.currentSession = asp::time::SystemTime::now().timeSinceEpoch().millis<u64>();
+    g.currentSession = asp::time::SystemTime::now().timeSinceEpoch().millis();
     g.lastAutoSaveFrame = 0;
     
     return true;
   }
   
   void resetLevel() {
+    bool hadCheckpoints = m_checkpointArray->count() > 0;
+    
     PlayLayer::resetLevel();
     
     auto& g = Global::get();
     
-    g.m_frameCount = 0;
+    // Don't reset m_frameCount when checkpoints exist - the checkpoint restore handles the frame
+    // Only reset when starting fresh (no checkpoints)
+    if (!hadCheckpoints) {
+        g.m_frameCount = 0;
+    }
     
     int frame = Global::getCurrentFrame();
     #ifdef GEODE_IS_WINDOWS
     if (!m_isPracticeMode)
-      g.renderer.levelStartFrame = frame;
+    g.renderer.levelStartFrame = frame;
     #endif
     
     if (g.restart && m_isPlatformer && g.state != state::none)
@@ -163,11 +169,6 @@ class $modify(PlayLayer) {
       g.macro.framerate = 240.f;
       if (g.layer) static_cast<RecordLayer*>(g.layer)->updateTPS();
       
-      PlayerData p1Data = PlayerPracticeFixes::saveData(m_player1);
-      PlayerData p2Data = PlayerPracticeFixes::saveData(m_player2);
-      
-      PlayerPracticeFixes::applyData(m_player1, p1Data, false, false);
-      PlayerPracticeFixes::applyData(m_player2, p2Data, true, false);
       Macro::resetVariables();
       
       m_player1->m_holdingRight = false;
@@ -286,54 +287,54 @@ class $modify(BGLHook, GJBaseGameLayer) {
   void processQueuedButtons(float dt, bool clearInputQueue) {
     auto& g = Global::get();
     PlayLayer* pl = PlayLayer::get();
-
+    
     if (!pl) {
       return GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
     }
-
+    
     Global::updateSeed();
-
+    
     bool rendering = false;
     /*rendering = g.renderer.recording || g.renderer.recordingAudio;*/
-
+    
     if (g.state != state::none || rendering) {
       /*if (!g.firstAttempt) {
-        g.renderer.dontRender = false;
-        g.renderer.dontRecordAudio = false;
+      g.renderer.dontRender = false;
+      g.renderer.dontRecordAudio = false;
       }*/
       int frame = Global::getCurrentFrame();
       if (frame > 2 && g.firstAttempt && g.macro.xdBotMacro) {
         g.firstAttempt = false;
         if ((m_isPlatformer || rendering) && !m_levelEndAnimationStarted)
-          return pl->resetLevelFromStart();
+        return pl->resetLevelFromStart();
         else if (!m_levelEndAnimationStarted)
-          return pl->resetLevel();
+        return pl->resetLevel();
       }
-
+      
       if (g.previousFrame == frame && frame != 0 && g.macro.xdBotMacro)
-        return GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
+      return GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
     }
-
+    
     GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
-
+    
     if (g.state == state::none)
-      return;
-
+    return;
+    
     int frame = Global::getCurrentFrame();
     g.previousFrame = frame;
-
+    
     if (g.macro.xdBotMacro && g.restart && !m_levelEndAnimationStarted) {
       if ((m_isPlatformer && g.state != state::none) /*|| g.renderer.recordingAudio*/)
-        return pl->resetLevelFromStart();
+      return pl->resetLevelFromStart();
       else
-        return pl->resetLevel();
+      return pl->resetLevel();
     }
-
+    
     if (g.state == state::recording)
-      handleRecording(frame);
-
+    handleRecording(frame);
+    
     if (g.state == state::playing)
-      handlePlaying(Global::getCurrentFrame());
+    handlePlaying(Global::getCurrentFrame());
   }
   #endif
   
@@ -348,15 +349,15 @@ class $modify(BGLHook, GJBaseGameLayer) {
     
     /*
     if (g.delayedFrameInput[0] == frame) {
-      g.delayedFrameInput[0] = -1;
-      // if ((g.heldButtons[0] && twoPlayers) || (!twoPlayers && (g.heldButtons[0] || g.heldButtons[3])))
-      GJBaseGameLayer::handleButton(true, 1, true);
+    g.delayedFrameInput[0] = -1;
+    // if ((g.heldButtons[0] && twoPlayers) || (!twoPlayers && (g.heldButtons[0] || g.heldButtons[3])))
+    GJBaseGameLayer::handleButton(true, 1, true);
     }
     
     if (g.delayedFrameInput[1] == frame) {
-      g.delayedFrameInput[1] = -1;
-      // if ((g.heldButtons[3] && twoPlayers) || (!twoPlayers && (g.heldButtons[0] || g.heldButtons[3])))
-      GJBaseGameLayer::handleButton(true, 1, false);
+    g.delayedFrameInput[1] = -1;
+    // if ((g.heldButtons[3] && twoPlayers) || (!twoPlayers && (g.heldButtons[0] || g.heldButtons[3])))
+    GJBaseGameLayer::handleButton(true, 1, false);
     }
     */
     
@@ -365,23 +366,23 @@ class $modify(BGLHook, GJBaseGameLayer) {
     
     /*
     for (int x = 0; x < 2; x++) {
-      if (g.delayedFrameReleaseMain[x] == frame) {
-        bool player2 = x == 0;
-        g.delayedFrameReleaseMain[x] = -1;
-        GJBaseGameLayer::handleButton(false, 1, twoPlayers ? player2 : false);
-      }
-      
-      if (!m_isPlatformer)
-      continue;
-      
-      for (int y = 0; y < 2; y++) {
-        if (g.delayedFrameRelease[x][y] == frame) {
-          int button = y == 0 ? 2 : 3;
-          bool player2 = x == 0;
-          g.delayedFrameRelease[x][y] = -1;
-          GJBaseGameLayer::handleButton(false, button, player2);
-        }
-      }
+    if (g.delayedFrameReleaseMain[x] == frame) {
+    bool player2 = x == 0;
+    g.delayedFrameReleaseMain[x] = -1;
+    GJBaseGameLayer::handleButton(false, 1, twoPlayers ? player2 : false);
+    }
+    
+    if (!m_isPlatformer)
+    continue;
+    
+    for (int y = 0; y < 2; y++) {
+    if (g.delayedFrameRelease[x][y] == frame) {
+    int button = y == 0 ? 2 : 3;
+    bool player2 = x == 0;
+    g.delayedFrameRelease[x][y] = -1;
+    GJBaseGameLayer::handleButton(false, button, player2);
+    }
+    }
     }
     */
     

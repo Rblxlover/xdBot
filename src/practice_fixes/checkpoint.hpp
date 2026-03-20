@@ -3,109 +3,122 @@
 #include <Geode/binding/PlayerCheckpoint.hpp>
 #include <Geode/binding/PlayLayer.hpp>
 #include <Geode/binding/GameObject.hpp>
+#include <Geode/binding/DashRingObject.hpp>
 
 using namespace geode::prelude;
 
-class FixPlayerCheckpoint {
-public:
-    FixPlayerCheckpoint() = default;
+struct SupplementalPlayerState {
+    double m_yVelocity = 0.0;
+    double m_platformerXVelocity = 0.0;
+    bool m_isOnGround = false;
+    cocos2d::CCPoint m_lastPortalPos = {};
+    GameObject* m_lastActivatedPortal = nullptr;
+    cocos2d::CCPoint m_lastGroundedPos = {};
+    bool m_isDashing = false;
+    DashRingObject* m_dashRing = nullptr;
+    double m_lastLandTime = 0.0;
+    bool m_isAccelerating = false;
+    bool m_affectedByForces = false;
+    float m_rotationSpeed = 0.0f;
+    bool m_isRotating = false;
+    bool m_isBallRotating = false;
+    bool m_isBallRotating2 = false;
+    bool m_jumpBuffered = false;
+    bool m_stateRingJump = false;
+    bool m_touchedPad = false;
+    bool m_isMoving = false;
+    bool m_holdingRight = false;
+    bool m_holdingLeft = false;
+    bool m_leftPressedFirst = false;
+    std::map<int, bool> m_holdingButtons;
+    std::unordered_map<int, GJPointDouble> m_rotateObjectsRelated;
+    std::unordered_map<int, GameObject*> m_potentialSlopeMap;
 
-    FixPlayerCheckpoint(PlayerObject* player) {
-        if (!player) return;
-        
-        auto cp = PlayerCheckpoint::create();
-        if (!cp) return;
-        
-        m_checkpoint = cp;
-        m_isValid = true;
-        player->saveToCheckpoint(m_checkpoint.data());
+    SupplementalPlayerState() = default;
 
-        m_yVelocityRelated = player->m_yVelocityRelated;
-        m_groundYVelocity = player->m_groundYVelocity;
-        m_scaleXRelated2 = player->m_scaleXRelated2;
-        m_scaleXRelated3 = player->m_scaleXRelated3;
-        m_scaleXRelated4 = player->m_scaleXRelated4;
-        m_scaleXRelated5 = player->m_scaleXRelated5;
-        m_currentSlope = player->m_currentSlope;
-        m_currentSlope2 = player->m_currentSlope2;
-        m_slopeAngle = player->m_slopeAngle;
-        m_slopeAngleRadians = player->m_slopeAngleRadians;
-        m_slopeFlipGravityRelated = player->m_slopeFlipGravityRelated;
-        m_slopeSlidingMaybeRotated = player->m_slopeSlidingMaybeRotated;
-        m_currentSlopeYVelocity = player->m_currentSlopeYVelocity;
-        m_slopeRotation = player->m_slopeRotation;
-        m_isCollidingWithSlope = player->m_isCollidingWithSlope;
-        m_collidingWithSlopeId = player->m_collidingWithSlopeId;
-        m_maybeUpsideDownSlope = player->m_maybeUpsideDownSlope;
-        m_isOnSlope = player->m_isOnSlope;
-        m_wasOnSlope = player->m_wasOnSlope;
-        m_physDeltaRelated = player->m_physDeltaRelated;
+    SupplementalPlayerState(PlayerObject* p) {
+        if (!p) return;
+        m_yVelocity             = p->m_yVelocity;
+        m_platformerXVelocity   = p->m_platformerXVelocity;
+        m_isOnGround            = p->m_isOnGround;
+        m_lastPortalPos         = p->m_lastPortalPos;
+        m_lastActivatedPortal   = p->m_lastActivatedPortal;
+        m_lastGroundedPos       = p->m_lastGroundedPos;
+        m_isDashing             = p->m_isDashing;
+        m_dashRing              = p->m_dashRing;
+        m_lastLandTime          = p->m_lastLandTime;
+        m_isAccelerating        = p->m_isAccelerating;
+        m_affectedByForces      = p->m_affectedByForces;
+        m_rotationSpeed         = p->m_rotationSpeed;
+        m_isRotating            = p->m_isRotating;
+        m_isBallRotating        = p->m_isBallRotating;
+        m_isBallRotating2       = p->m_isBallRotating2;
+        m_jumpBuffered          = p->m_jumpBuffered;
+        m_stateRingJump         = p->m_stateRingJump;
+        m_touchedPad            = p->m_touchedPad;
+        m_isMoving              = p->m_isMoving;
+        m_holdingRight          = p->m_holdingRight;
+        m_holdingLeft           = p->m_holdingLeft;
+        m_leftPressedFirst      = p->m_leftPressedFirst;
+        m_holdingButtons        = p->m_holdingButtons;
+        m_rotateObjectsRelated  = p->m_rotateObjectsRelated;
+        m_potentialSlopeMap = p->m_potentialSlopeMap;
     }
 
-    void apply(PlayerObject* player) {
-        if (!player || !m_checkpoint || !m_isValid) return;
-        
-        player->loadFromCheckpoint(m_checkpoint.data());
-
-        player->m_yVelocityRelated = m_yVelocityRelated;
-        player->m_groundYVelocity = m_groundYVelocity;
-        player->m_scaleXRelated2 = m_scaleXRelated2;
-        player->m_scaleXRelated3 = m_scaleXRelated3;
-        player->m_scaleXRelated4 = m_scaleXRelated4;
-        player->m_scaleXRelated5 = m_scaleXRelated5;
-        player->m_currentSlope = m_currentSlope;
-        player->m_currentSlope2 = m_currentSlope2;
-        player->m_slopeAngle = m_slopeAngle;
-        player->m_slopeAngleRadians = m_slopeAngleRadians;
-        player->m_slopeFlipGravityRelated = m_slopeFlipGravityRelated;
-        player->m_slopeSlidingMaybeRotated = m_slopeSlidingMaybeRotated;
-        player->m_currentSlopeYVelocity = m_currentSlopeYVelocity;
-        player->m_slopeRotation = m_slopeRotation;
-        player->m_isCollidingWithSlope = m_isCollidingWithSlope;
-        player->m_collidingWithSlopeId = m_collidingWithSlopeId;
-        player->m_maybeUpsideDownSlope = m_maybeUpsideDownSlope;
-        player->m_isOnSlope = m_isOnSlope;
-        player->m_wasOnSlope = m_wasOnSlope;
-        player->m_physDeltaRelated = m_physDeltaRelated;
+    void apply(PlayerObject* p) const {
+        if (!p) return;
+        p->m_yVelocity            = m_yVelocity;
+        p->m_platformerXVelocity  = m_platformerXVelocity;
+        p->m_isOnGround           = m_isOnGround;
+        p->m_lastPortalPos        = m_lastPortalPos;
+        p->m_lastActivatedPortal  = m_lastActivatedPortal;
+        p->m_lastGroundedPos      = m_lastGroundedPos;
+        p->m_isDashing            = m_isDashing;
+        p->m_dashRing             = m_dashRing;
+        p->m_lastLandTime         = m_lastLandTime;
+        p->m_isAccelerating       = m_isAccelerating;
+        p->m_affectedByForces     = m_affectedByForces;
+        p->m_rotationSpeed        = m_rotationSpeed;
+        p->m_isRotating           = m_isRotating;
+        p->m_isBallRotating       = m_isBallRotating;
+        p->m_isBallRotating2      = m_isBallRotating2;
+        p->m_jumpBuffered         = m_jumpBuffered;
+        p->m_stateRingJump        = m_stateRingJump;
+        p->m_touchedPad           = m_touchedPad;
+        p->m_isMoving             = m_isMoving;
+        p->m_holdingRight         = m_holdingRight;
+        p->m_holdingLeft          = m_holdingLeft;
+        p->m_leftPressedFirst     = m_leftPressedFirst;
+        p->m_holdingButtons       = m_holdingButtons;
+        p->m_rotateObjectsRelated = m_rotateObjectsRelated;
+        p->m_potentialSlopeMap = m_potentialSlopeMap;
     }
-
-private:
-    bool m_isValid = false;
-    Ref<PlayerCheckpoint> m_checkpoint = nullptr;
-    
-    double m_yVelocityRelated, m_groundYVelocity, m_scaleXRelated2, m_scaleXRelated3;
-    double m_scaleXRelated4, m_scaleXRelated5, m_currentSlopeYVelocity, m_slopeRotation, m_physDeltaRelated;
-    GameObject *m_currentSlope, *m_currentSlope2;
-    float m_slopeAngle, m_slopeAngleRadians;
-    bool m_slopeFlipGravityRelated, m_slopeSlidingMaybeRotated, m_isCollidingWithSlope;
-    bool m_maybeUpsideDownSlope, m_isOnSlope, m_wasOnSlope;
-    int m_collidingWithSlopeId;
 };
 
-class FixPlayLayerCheckpoint {
-public:
-    FixPlayLayerCheckpoint() = default;
-    FixPlayLayerCheckpoint(PlayLayer* playLayer) {
-        if (!playLayer) return;
-        m_player1CollisionBlock = playLayer->m_player1CollisionBlock;
-        m_player2CollisionBlock = playLayer->m_player2CollisionBlock;
-        m_extraDelta = playLayer->m_extraDelta;
-        m_currentStep = playLayer->m_currentStep;
-        m_unk3380 = playLayer->m_unk3380;
+struct SupplementalPlayLayerState {
+    GameObject* m_player1CollisionBlock = nullptr;
+    GameObject* m_player2CollisionBlock = nullptr;
+    double m_extraDelta = 0.0;
+    int m_currentStep = 0;
+    float m_unk3380 = 0.0f;
+
+    SupplementalPlayLayerState() = default;
+
+    SupplementalPlayLayerState(PlayLayer* pl) {
+        if (!pl) return;
+        m_player1CollisionBlock = pl->m_player1CollisionBlock;
+        m_player2CollisionBlock = pl->m_player2CollisionBlock;
+        m_extraDelta            = pl->m_extraDelta;
+        m_currentStep           = pl->m_currentStep;
+        m_unk3380               = pl->m_unk3380;
     }
 
-    void apply(PlayLayer* playLayer) {
-        if (!playLayer) return;
-        playLayer->m_player1CollisionBlock = m_player1CollisionBlock;
-        playLayer->m_player2CollisionBlock = m_player2CollisionBlock;
-        playLayer->m_extraDelta = m_extraDelta;
-        playLayer->m_currentStep = m_currentStep;
-        playLayer->m_unk3380 = m_unk3380;
+    void apply(PlayLayer* pl) const {
+        if (!pl) return;
+        pl->m_player1CollisionBlock = m_player1CollisionBlock;
+        pl->m_player2CollisionBlock = m_player2CollisionBlock;
+        pl->m_extraDelta            = m_extraDelta;
+        pl->m_currentStep           = m_currentStep;
+        pl->m_unk3380               = m_unk3380;
     }
-
-private:
-    GameObject *m_player1CollisionBlock, *m_player2CollisionBlock;
-    double m_extraDelta;
-    int m_currentStep;
-    float m_unk3380;
 };
