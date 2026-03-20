@@ -31,14 +31,12 @@ struct SupplementalPlayerState {
     bool m_holdingLeft = false;
     bool m_leftPressedFirst = false;
     gd::map<int, bool> m_holdingButtons;
-    gd::unordered_map<int, GJPointDouble> m_rotateObjectsRelated;
-    gd::unordered_map<int, GameObject*> m_potentialSlopeMap;
+    #ifndef GEODE_IS_ANDROID
+    std::unordered_map<int, GJPointDouble> m_rotateObjectsRelated;
+    std::unordered_map<int, GameObject*> m_potentialSlopeMap;
+    #endif
 
     SupplementalPlayerState() = default;
-    SupplementalPlayerState(const SupplementalPlayerState&) = delete;
-    SupplementalPlayerState& operator=(const SupplementalPlayerState&) = delete;
-    SupplementalPlayerState(SupplementalPlayerState&&) = delete;
-    SupplementalPlayerState& operator=(SupplementalPlayerState&&) = delete;
 
     SupplementalPlayerState(PlayerObject* p) {
         if (!p) return;
@@ -64,16 +62,9 @@ struct SupplementalPlayerState {
         m_holdingRight          = p->m_holdingRight;
         m_holdingLeft           = p->m_holdingLeft;
         m_leftPressedFirst      = p->m_leftPressedFirst;
-        
-        for (auto const& pair : p->m_holdingButtons) {
-            m_holdingButtons.insert(pair);
-        }
-        for (auto const& pair : p->m_rotateObjectsRelated) {
-            m_rotateObjectsRelated.insert(pair);
-        }
-        for (auto const& pair : p->m_potentialSlopeMap) {
-            m_potentialSlopeMap.insert(pair);
-        }
+        m_holdingButtons        = p->m_holdingButtons;
+        m_rotateObjectsRelated  = p->m_rotateObjectsRelated;
+        m_potentialSlopeMap = p->m_potentialSlopeMap;
     }
 
     void apply(PlayerObject* p) const {
@@ -100,19 +91,11 @@ struct SupplementalPlayerState {
         p->m_holdingRight         = m_holdingRight;
         p->m_holdingLeft          = m_holdingLeft;
         p->m_leftPressedFirst     = m_leftPressedFirst;
-        
-        p->m_holdingButtons.clear();
-        for (auto const& pair : m_holdingButtons) {
-            p->m_holdingButtons.insert(pair);
-        }
-        p->m_rotateObjectsRelated.clear();
-        for (auto const& pair : m_rotateObjectsRelated) {
-            p->m_rotateObjectsRelated.insert(pair);
-        }
-        p->m_potentialSlopeMap.clear();
-        for (auto const& pair : m_potentialSlopeMap) {
-            p->m_potentialSlopeMap.insert(pair);
-        }
+        p->m_holdingButtons       = m_holdingButtons;
+        #ifndef GEODE_IS_ANDROID
+        p->m_rotateObjectsRelated = m_rotateObjectsRelated;
+        p->m_potentialSlopeMap = m_potentialSlopeMap;
+        #endif
     }
 };
 
