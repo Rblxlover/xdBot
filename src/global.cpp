@@ -95,21 +95,7 @@ bool Global::hasIncompatibleMods() {
   
   #endif
   
-  if (Mod* mod = Loader::get()->getLoadedMod("eclipse.eclipse-menu")) {
-    std::filesystem::path configPath = mod->getSaveDir() / "config.json";
-    
-    if (std::filesystem::exists(configPath)) {
-      auto jsonResult = geode::utils::file::readJson(configPath);
-      if (jsonResult) {
-        auto jsonData = jsonResult.unwrap();
-        if (jsonData.contains("global.tpsbypass.toggle")) {
-          if (jsonData["global.tpsbypass.toggle"].asBool().unwrapOr(false)) {
-            settingsToDisable.push_back("<cr>Physics Bypass (Eclipse Menu)</c>");
-          }
-        }
-      }
-    }
-  }
+
   
   for (IncompatibleMod incompatMod : incompatibleMods) {
     Mod* mod = Loader::get()->getLoadedMod(incompatMod.ID);

@@ -11,6 +11,12 @@
 	"name": "xdBot",
 	"developer": "Zilko",
 	"description": "Best Free Bot fr",
+	"dependencies": {
+		"eclipse.eclipse-menu": {
+			"version": ">=1.8.3",
+			"required": false
+		}
+	},
 	"settings": {
 		"button-setting": {
 			"type": "custom:button",

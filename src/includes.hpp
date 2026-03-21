@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 // #include <Geode/loader/SettingEvent.hpp>
+#include <eclipse.eclipse-menu/include/config.hpp>
 
 #include <string>
 #include <thread>
@@ -145,13 +146,22 @@ public:
     void setTpsEnabled(bool enabled) {
         tpsEnabled = enabled;
         mod->setSavedValue("macro_tps_enabled", enabled);
-        if (onTpsEnabledChanged) onTpsEnabledChanged(enabled);
+        
+        if (Loader::get()->getLoadedMod("eclipse.eclipse-menu")) {
+            eclipse::config::setInternal("global.tpsbypass.toggle", enabled);
+        } else {
+            if (onTpsEnabledChanged) onTpsEnabledChanged(enabled);
+        }
     }
     
     void setTps(float newTps) {
         tps = newTps;
         mod->setSavedValue("macro_tps", static_cast<double>(newTps));
-        if (onTpsChanged) onTpsChanged(static_cast<double>(newTps));
+        if (Loader::get()->getLoadedMod("eclipse.eclipse-menu")) {
+            eclipse::config::setInternal("global.tpsbypass", static_cast<double>(newTps));
+        } else {
+            if (onTpsChanged) onTpsChanged(static_cast<double>(newTps));
+        }
     }
     
     bool previousTpsEnabled = false;

@@ -277,7 +277,9 @@ void applyPatches() {
 }
 
 $execute {
-    applyPatches();
+    if (!Loader::get()->getLoadedMod("eclipse.eclipse-menu")) {
+        applyPatches();
+    }
 }
 
 class $modify(TPSBypassGJBGLHook, GJBaseGameLayer) {
