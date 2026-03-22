@@ -14,6 +14,14 @@ void Macro::recordAction(int frame, int button, bool player2, bool hold) {
         Macro::updateInfo(pl);
 
     if (g.tpsEnabled) g.macro.framerate = g.tps;
+    
+    for (int i = (int)g.macro.inputs.size() - 1; i >= 0; i--) {
+        auto& last = g.macro.inputs[i];
+        if (last.button == button && last.player2 == player2) {
+            if (last.down == hold) return;
+            break;
+        }
+    }
 
     if (Macro::flipControls())
       player2 = !player2;
