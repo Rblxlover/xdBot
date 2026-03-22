@@ -108,7 +108,7 @@ bool RenderSettingsLayer::init() {
     m_mainLayer->addChild(menu);
     menu->setPositionX(menu->getPositionX() - 67);
     
-    CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+    NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f);
     bg->setColor({ 0,0,0 });
     bg->setOpacity(75);
@@ -148,7 +148,7 @@ bool RenderSettingsLayer::init() {
     argsInput->setAllowedChars(" 0123456789abcdefghijklmnopqrstuvwxyz-_:;.\"\\/[](){}+=<>|!*&'%@");
     menu->addChild(argsInput);
     
-    bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+    bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f);
     bg->setColor({ 0,0,0 });
     bg->setOpacity(75);
@@ -188,7 +188,7 @@ bool RenderSettingsLayer::init() {
     audioArgsInput->setAllowedChars(" 0123456789abcdefghijklmnopqrstuvwxyz-_:;.\"\\/[](){}+=<>|!*&'%@");
     menu->addChild(audioArgsInput);
     
-    bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+    bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.375f);
     bg->setColor({ 0,0,0 });
     bg->setOpacity(75);
@@ -197,7 +197,7 @@ bool RenderSettingsLayer::init() {
     bg->setContentSize({ 82, 55 });
     menu->addChild(bg);
     
-    bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+    bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f);
     bg->setColor({ 0,0,0 });
     bg->setOpacity(75);

@@ -13,7 +13,7 @@ private:
         if (!Popup::init(243, 231, Utils::getTexture().c_str())) return false;
         setTitle("Render Presets");
 
-        CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+        NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
         bg->setColor({ 0,0,0 });
         bg->setOpacity(75);
         bg->setPosition({m_size.width / 2, 116.5});
@@ -45,7 +45,7 @@ private:
             if (!Mod::get()->hasSavedValue(id)) {
                 lbl->setString("N/A");
                 btn->setEnabled(false);
-                spr->getChildByType<CCScale9Sprite>(0)->setOpacity(120);
+                spr->getChildByType<NineSlice>(0)->setOpacity(120);
                 spr->getChildByType<CCLabelBMFont>(0)->setOpacity(120);
             } else {
                 btn->setEnabled(true);

@@ -613,7 +613,7 @@ class $modify(PauseLayer) {
         
         #endif
         
-        CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+        NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
         bg->setScale(0.7f);
         bg->setColor({ 0,0,0 });
         bg->setOpacity(75);
@@ -622,7 +622,7 @@ class $modify(PauseLayer) {
         bg->setContentSize({ 275, 151 });
         menu->addChild(bg);
         
-        bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+        bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
         bg->setScale(0.7f);
         bg->setColor({ 0,0,0 });
         bg->setOpacity(75);
@@ -631,7 +631,7 @@ class $modify(PauseLayer) {
         bg->setContentSize({ 275, 169 });
         menu->addChild(bg);
         
-        bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+        bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
         bg->setScale(0.7f);
         bg->setColor({ 0,0,0 });
         bg->setOpacity(75);
@@ -869,7 +869,7 @@ class $modify(PauseLayer) {
                             fpsInput->setDelegate(this);
                             menu->addChild(fpsInput);
                             
-                            bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                            bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                             bg->setScale(0.375f);
                             bg->setColor({ 0,0,0 });
                             bg->setOpacity(75);
@@ -879,7 +879,7 @@ class $modify(PauseLayer) {
                             bg->setZOrder(29);
                             menu->addChild(bg);
                             
-                            bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                            bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                             bg->setScale(0.375f);
                             bg->setColor({ 0,0,0 });
                             bg->setOpacity(75);
@@ -889,7 +889,7 @@ class $modify(PauseLayer) {
                             bg->setZOrder(29);
                             menu->addChild(bg);
                             
-                            bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                            bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                             bg->setScale(0.375f);
                             bg->setColor({ 0,0,0 });
                             bg->setOpacity(75);
@@ -899,7 +899,7 @@ class $modify(PauseLayer) {
                             bg->setZOrder(29);
                             menu->addChild(bg);
                             
-                            bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                            bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                             bg->setScale(0.375f);
                             bg->setColor({ 0,0,0 });
                             bg->setOpacity(75);
@@ -909,7 +909,7 @@ class $modify(PauseLayer) {
                             bg->setZOrder(29);
                             menu->addChild(bg);
                             
-                            bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                            bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                             bg->setScale(0.375f);
                             bg->setColor({ 0,0,0 });
                             bg->setOpacity(75);
@@ -1077,7 +1077,7 @@ class $modify(PauseLayer) {
                             }
                             
                             if (sett.input == InputType::Speedhack) {
-                                CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                                NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                                 bg->setPosition(ccp(110, yPos + 10));
                                 bg->setScale(0.355f);
                                 bg->setColor({ 0,0,0 });
@@ -1109,7 +1109,7 @@ class $modify(PauseLayer) {
                             }
                             
                             if (sett.input == InputType::Tps) {
-                                tpsBg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                                tpsBg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                                 tpsBg->setPosition(ccp(116, yPos + 10));
                                 tpsBg->setScale(0.355f);
                                 tpsBg->setColor({ 0,0,0 });
@@ -1141,7 +1141,7 @@ class $modify(PauseLayer) {
                             }
                             
                             if (sett.input == InputType::Seed) {
-                                CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                                NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                                 bg->setPosition(ccp(64, yPos + 10));
                                 bg->setScale(0.355f);
                                 bg->setColor({ 0,0,0 });
@@ -1173,7 +1173,7 @@ class $modify(PauseLayer) {
                             }
                             
                             if (sett.input == InputType::Respawn) {
-                                CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+                                NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
                                 bg->setPosition(ccp(110, yPos + 10));
                                 bg->setScale(0.355f);
                                 bg->setColor({ 0,0,0 });

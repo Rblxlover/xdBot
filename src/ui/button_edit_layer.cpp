@@ -191,7 +191,7 @@ bool ButtonEditLayer::init() {
     selectedLbl->setPositionY(121);
     menu->addChild(selectedLbl);
 
-    CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+    NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setColor({ 0,0,0 });
     bg->setOpacity(78);
     bg->setPositionY(77);
@@ -233,7 +233,7 @@ bool ButtonEditLayer::init() {
     menu->addChild(btn);
 
     ButtonSprite* spr1 = btn->getChildByType<ButtonSprite>(0);
-    CCScale9Sprite* spr2 = spr1->getChildByType<CCScale9Sprite>(0);
+    NineSlice* spr2 = spr1->getChildByType<NineSlice>(0);
     CCLabelBMFont* lbl = spr1->getChildByType<CCLabelBMFont>(0);
     spr2->setOpacity(130);
     lbl->setOpacity(130);
