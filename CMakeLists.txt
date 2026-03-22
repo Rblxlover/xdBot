@@ -21,7 +21,7 @@ endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
-CPMAddPackage("gh:prevter/msgpack-for-matjson#16a7957")
+CPMAddPackage("gh:prevter/msgpack-for-matjson#12edd5a")
 CPMAddPackage("gh:prevter/sinaps#b9c3434")
 CPMAddPackage("gh:maxnut/GDReplayFormat#72078e5")
 CPMAddPackage("gh:maxnut/GDR-converter#71104a9")

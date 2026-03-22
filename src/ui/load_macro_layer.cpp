@@ -161,27 +161,19 @@ void LoadMacroLayer::onImportMacro(CCObject*) {
 		self->isPickingFile = false;
 		
 		if (!res.isOk()) return;
-				
+		
 		auto pathOpt = res.unwrap();
 		if (!pathOpt) return;
 		
 		std::filesystem::path path = pathOpt.value();
+		std::string ext = path.extension().string();
+		bool isGdrJson = (ext == ".json" && path.stem().extension().string() == ".gdr");
+		bool needsConversion = (ext == ".xd");
+		std::string outExt = isGdrJson ? ".gdr.json" : ext;
 		
-		Macro tempMacro;
-		if (path.extension() == ".xd") {
-			tempMacro = Macro::XDtoGDR(path);
-			if (tempMacro.description == "fail") {
-				FLAlertLayer::create("Error", "Import failed. ID: 46", "OK")->show();
-				return;
-			}
-		} else {
-			auto dataRes = geode::utils::file::readBinary(path);
-			if (!dataRes) return;
-			auto data = dataRes.unwrap();
-			tempMacro = Macro::importData(data);
-		}
-		
-		std::string name = geode::utils::string::pathToString(path.stem());
+		std::string name = geode::utils::string::pathToString(
+			isGdrJson ? path.stem().stem() : path.stem()
+		);
 		
 		#ifdef GEODE_IS_IOS
 		std::filesystem::path folder = Mod::get()->getSaveDir() / "macros";
@@ -189,26 +181,44 @@ void LoadMacroLayer::onImportMacro(CCObject*) {
 		std::filesystem::path folder = Mod::get()->getSettingValue<std::filesystem::path>("macros_folder");
 		#endif
 		
-		std::filesystem::path finalPath = folder / (name + ".gdr2");
+		std::filesystem::path finalPath = folder / (name + outExt);
 		int iterations = 1;
 		while (std::filesystem::exists(finalPath)) {
-			finalPath = folder / fmt::format("{} ({}).gdr2", name, iterations++);
+			finalPath = folder / fmt::format("{} ({}){}", name, iterations++, outExt);
+		}
+		
+		if (!needsConversion) {
+			std::error_code ec;
+			std::filesystem::copy_file(path, finalPath, std::filesystem::copy_options::overwrite_existing, ec);
+			if (ec) {
+				FLAlertLayer::create("Error", "Failed to copy macro file.", "OK")->show();
+				return;
+			}
+			self->reloadList(0);
+			Notification::create("Macro Imported", NotificationIcon::Success)->show();
+			return;
+		}
+		
+		Macro tempMacro = Macro::XDtoGDR(path);
+		if (tempMacro.description == "fail") {
+			FLAlertLayer::create("Error", "Import failed. ID: 46", "OK")->show();
+			return;
 		}
 		
 		auto exportResult = tempMacro.exportGDR2();
-		if (exportResult.isOk()) {
-			if (geode::utils::file::writeBinary(finalPath, exportResult.unwrap())) {
-				self->reloadList(0);
-				
-				if (path.extension() == ".xd") {
-					FLAlertLayer::create("Warning", "Legacy .xd macros may be unstable.", "OK")->show();
-				}
-				Notification::create("Macro Imported", NotificationIcon::Success)->show();
-				self->isPickingFile = false;
-			}
-		} else {
+		if (exportResult.isErr()) {
 			FLAlertLayer::create("Error", "Failed to export imported macro.", "OK")->show();
+			return;
 		}
+		
+		if (!geode::utils::file::writeBinary(finalPath, exportResult.unwrap())) {
+			FLAlertLayer::create("Error", "Failed to write macro file.", "OK")->show();
+			return;
+		}
+		
+		self->reloadList(0);
+		FLAlertLayer::create("Warning", "Legacy .xd macros may be unstable.", "OK")->show();
+		Notification::create("Macro Imported", NotificationIcon::Success)->show();
 	});
 }
 
@@ -679,9 +689,9 @@ void MacroCell::handleLoad() {
 		auto readResult = geode::utils::file::readBinary(path);
 		if (readResult.isErr()) {
 			if (!isMerge)
-				return FLAlertLayer::create("Error", "There was an error loading this macro. ID: 45", "OK")->show();
+			return FLAlertLayer::create("Error", "There was an error loading this macro. ID: 45", "OK")->show();
 			else
-				return;
+			return;
 		}
 		
 		newMacro = Macro::importData(readResult.unwrap());
