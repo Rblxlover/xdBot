@@ -58,19 +58,28 @@ class $modify(FixPlayLayer, PlayLayer) {
         }
         
         auto& g = Global::get();
-        if (g.state == state::recording) {
+        if (g.state == state::recording || g.state == state::playing) {
             auto inputIt = fields->m_checkpointInputs.find(checkpoint);
             if (inputIt != fields->m_checkpointInputs.end()) {
                 g.ignoreRecordAction = true;
-                g.macro.inputs = inputIt->second;
-                auto fixIt = fields->m_checkpointFrameFixes.find(checkpoint);
-                if (fixIt != fields->m_checkpointFrameFixes.end())
-                    g.macro.frameFixes = fixIt->second;
+                
+                if (g.state == state::recording) {
+                    g.macro.inputs = inputIt->second;
+                }
                 
                 auto frameIt = fields->m_checkpointFrames.find(checkpoint);
                 if (frameIt != fields->m_checkpointFrames.end()) {
                     g.m_frameCount = frameIt->second;
                     int targetFrame = g.m_frameCount - g.frameOffset;
+                    
+                    if (g.state == state::recording) {
+                        g.macro.inputs.erase(
+                            std::remove_if(g.macro.inputs.begin(), g.macro.inputs.end(),
+                            [targetFrame](const input& inp) { return inp.frame >= targetFrame; }),
+                            g.macro.inputs.end()
+                        );
+                    }
+                    
                     g.currentAction = 0;
                     while (g.currentAction < g.macro.inputs.size() && g.macro.inputs[g.currentAction].frame < targetFrame) {
                         g.currentAction++;
@@ -80,6 +89,13 @@ class $modify(FixPlayLayer, PlayLayer) {
                         g.currentFrameFix++;
                     }
                 }
+                
+                if (g.state == state::recording) {
+                    auto fixIt = fields->m_checkpointFrameFixes.find(checkpoint);
+                    if (fixIt != fields->m_checkpointFrameFixes.end())
+                    g.macro.frameFixes = fixIt->second;
+                }
+                
                 g.ignoreRecordAction = false;
             }
         }
