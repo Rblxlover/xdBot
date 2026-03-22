@@ -58,7 +58,9 @@ class $modify(FixPlayLayer, PlayLayer) {
         }
         
         auto& g = Global::get();
-        if (g.state == state::recording || g.state == state::playing) {
+        // Only restore inputs from checkpoint during recording mode
+        // During playback mode, don't replace the macro inputs when loading a checkpoint
+        if (g.state == state::recording) {
             auto inputIt = fields->m_checkpointInputs.find(checkpoint);
             if (inputIt != fields->m_checkpointInputs.end()) {
                 g.ignoreRecordAction = true;
