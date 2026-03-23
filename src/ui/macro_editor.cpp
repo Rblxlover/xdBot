@@ -911,12 +911,13 @@ void MacroEditLayer::onSave(CCObject*) {
 
 void MacroEditLayer::toggleSaveButton(bool toggle) {
     ButtonSprite* btnSpr = saveBtn->getChildByType<ButtonSprite>(0);
+    if (!btnSpr) return;
     NineSlice* spr = btnSpr->getChildByType<NineSlice>(0);
     CCLabelBMFont* lbl = btnSpr->getChildByType<CCLabelBMFont>(0);
     
     saveBtn->setEnabled(toggle);
-    spr->setOpacity(toggle ? 255 : 130);
-    lbl->setOpacity(toggle ? 255 : 130);
+    if (spr) spr->setOpacity(toggle ? 255 : 130);
+    if (lbl) lbl->setOpacity(toggle ? 255 : 130);
 }
 
 void MacroEditLayer::updateSaved() {

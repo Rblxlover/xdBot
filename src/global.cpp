@@ -95,7 +95,7 @@ bool Global::hasIncompatibleMods() {
   
   #endif
   
-
+  
   
   for (IncompatibleMod incompatMod : incompatibleMods) {
     Mod* mod = Loader::get()->getLoadedMod(incompatMod.ID);
@@ -207,31 +207,31 @@ float Global::getTPS() {
 }
 
 /*int Global::getCurrentFrame(bool editor) {
-  // double levelTime;
-  PlayLayer* pl = PlayLayer::get();
-  
-  if (!pl) {
-    if (!editor) return 0;
-    
-    // levelTime = GJBaseGameLayer::get()->m_gameState.m_levelTime;
-  }
-  
-  auto& g = Global::get();
-  int frame;
-  // levelTime = pl->m_gameState.m_levelTime;
-  
-  if (!g.macro.xdBotMacro && g.state == state::playing) {
-    frame = pl->m_gameState.m_currentProgress;
-  }
-  else {
-    frame = static_cast<int>(pl->m_gameState.m_levelTime * getTPS());
-    frame++;
-  }
-  
-  frame -= g.frameOffset;
-  if (frame < 0) return 0;
-  
-  return frame;
+// double levelTime;
+PlayLayer* pl = PlayLayer::get();
+
+if (!pl) {
+if (!editor) return 0;
+
+// levelTime = GJBaseGameLayer::get()->m_gameState.m_levelTime;
+}
+
+auto& g = Global::get();
+int frame;
+// levelTime = pl->m_gameState.m_levelTime;
+
+if (!g.macro.xdBotMacro && g.state == state::playing) {
+frame = pl->m_gameState.m_currentProgress;
+}
+else {
+frame = static_cast<int>(pl->m_gameState.m_levelTime * getTPS());
+frame++;
+}
+
+frame -= g.frameOffset;
+if (frame < 0) return 0;
+
+return frame;
 }*/
 
 int Global::getCurrentFrame(bool editor) {
@@ -248,59 +248,59 @@ int Global::getCurrentFrame(bool editor) {
 }
 
 class $modify(FrameCounterGJBaseGameLayer, GJBaseGameLayer) {
-    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
-        auto& g = Global::get();
-        auto* playLayer = PlayLayer::get();
-        bool isPlaying = playLayer && 
-            !playLayer->m_hasCompletedLevel &&
-            !playLayer->m_isPaused &&
-            playLayer->m_gameState.m_currentProgress > 0 &&
-            !playLayer->m_player1->m_isDead &&
-            (!playLayer->m_gameState.m_isDualMode || !playLayer->m_player2->m_isDead);
-        
-        g.m_isHalfTick = isHalfTick;
-        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
-        
-        if (isPlaying && !isHalfTick) {
-            g.m_frameCount++;
-        }
-        
-        g.m_isHalfTick = false;
+  void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+    auto& g = Global::get();
+    auto* playLayer = PlayLayer::get();
+    bool isPlaying = playLayer && 
+    !playLayer->m_hasCompletedLevel &&
+    !playLayer->m_isPaused &&
+    playLayer->m_gameState.m_currentProgress > 0 &&
+    !playLayer->m_player1->m_isDead &&
+    (!playLayer->m_gameState.m_isDualMode || !playLayer->m_player2->m_isDead);
+    
+    g.m_isHalfTick = isHalfTick;
+    GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+    
+    if (isPlaying && !isHalfTick) {
+      g.m_frameCount++;
     }
+    
+    g.m_isHalfTick = false;
+  }
 };
 
 void Global::updateSeed(bool isRestart) {
-    auto& g = Global::get();
+  auto& g = Global::get();
+  
+  if (g.seedEnabled) {
+    PlayLayer* pl = PlayLayer::get();
+    if (!pl) return;
     
-    if (g.seedEnabled) {
-        PlayLayer* pl = PlayLayer::get();
-        if (!pl) return;
-        
-        uint64_t seed = geode::utils::numFromString<uint64_t>(
-            g.mod->getSavedValue<std::string>("macro_seed")
-        ).unwrapOr(0);
-        
-        uint64_t finalSeed;
-        
-        if (!pl->m_player1->m_isDead) {
-            g.gen.seed(seed + static_cast<uint64_t>(pl->m_gameState.m_currentProgress));
-            
-            finalSeed = g.gen.generate(10000, 1000000000);
-        }
-        else {
-            finalSeed = geode::utils::random::generate(1000, 1000000000);
-        }
-        
-        GameToolbox::fast_srand(finalSeed);
-        g.safeMode = true;
+    uint64_t seed = geode::utils::numFromString<uint64_t>(
+      g.mod->getSavedValue<std::string>("macro_seed")
+    ).unwrapOr(0);
+    
+    uint64_t finalSeed;
+    
+    if (!pl->m_player1->m_isDead) {
+      g.gen.seed(seed + static_cast<uint64_t>(pl->m_gameState.m_currentProgress));
+      
+      finalSeed = g.gen.generate(10000, 1000000000);
+    }
+    else {
+      finalSeed = geode::utils::random::generate(1000, 1000000000);
     }
     
-    if (isRestart && g.state == state::recording) {
-        uint64_t gdSeed = GameToolbox::getfast_srand();
-        g.macro.seed = gdSeed;
-        
-        g.gen.seed(gdSeed);
-    }
+    GameToolbox::fast_srand(finalSeed);
+    g.safeMode = true;
+  }
+  
+  if (isRestart && g.state == state::recording) {
+    uint64_t gdSeed = GameToolbox::getfast_srand();
+    g.macro.seed = gdSeed;
+    
+    g.gen.seed(gdSeed);
+  }
 }
 
 void Global::updatePitch(float value) {
@@ -507,6 +507,13 @@ $execute{
   g.p2mirror = g.mod->getSavedValue<bool>("p2_input_mirror");
   g.tpsEnabled = g.mod->getSavedValue<bool>("macro_tps_enabled");
   g.tps = g.mod->getSavedValue<double>("macro_tps");
+  
+  if (Loader::get()->getLoadedMod("eclipse.eclipse-menu")) {
+    geode::queueInMainThread([&g] {
+      eclipse::config::setInternal("global.tpsbypass.toggle", g.tpsEnabled);
+      eclipse::config::setInternal("global.tpsbypass", static_cast<double>(g.tps));
+    });
+  }
   g.autoclicker = g.mod->getSavedValue<bool>("autoclicker_enabled");
   g.autoclickerP1 = g.mod->getSavedValue<bool>("autoclicker_p1");
   g.autoclickerP2 = g.mod->getSavedValue<bool>("autoclicker_p2");

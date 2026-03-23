@@ -29,6 +29,29 @@ $execute {
     }, Mod::get());
 };
 
+class $modify(EclipseSyncGJBGLHook, GJBaseGameLayer) {
+    void update(float dt) {
+        GJBaseGameLayer::update(dt);
+
+        static bool hasEclipse = Loader::get()->getLoadedMod("eclipse.eclipse-menu") != nullptr;
+        if (!hasEclipse) return;
+
+        auto& g = Global::get();
+        if (!g.tpsEnabled) return;
+
+        bool eclipseEnabled = eclipse::config::getInternal("global.tpsbypass.toggle", false);
+        double eclipseTps = eclipse::config::getInternal("global.tpsbypass", 240.0);
+
+        if (!eclipseEnabled) {
+            eclipse::config::setInternal("global.tpsbypass.toggle", true);
+        }
+
+        if (eclipseTps != static_cast<double>(g.tps)) {
+            eclipse::config::setInternal("global.tpsbypass", static_cast<double>(g.tps));
+        }
+    }
+};
+
 class $modify(PlayLayer) {
 
     struct Fields {
