@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-project(xdBot2 VERSION 1.0.0)
- 
+project(xdBot2 VERSION 1.0.0 LANGUAGES CXX)
+
 add_library(${PROJECT_NAME} SHARED
     src/main.cpp
     src/global.cpp
@@ -38,12 +38,16 @@ add_library(${PROJECT_NAME} SHARED
     src/practice_fixes/play_layer.cpp
 )
 
-if (NOT DEFINED ENV{GEODE_SDK})
+if (NOT DEFINED ENV{GEODE_SDK} OR "$ENV{GEODE_SDK}" STREQUAL "")
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
-else()
-    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
 endif()
 
-add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
+# Make sure the provided GEODE_SDK actually contains a top-level CMakeLists.txt
+if (EXISTS "$ENV{GEODE_SDK}/CMakeLists.txt")
+    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
+    add_subdirectory("$ENV{GEODE_SDK}" ${CMAKE_CURRENT_BINARY_DIR}/geode)
+else()
+    message(FATAL_ERROR "GEODE_SDK is set to '$ENV{GEODE_SDK}' but no CMakeLists.txt was found at '$ENV{GEODE_SDK}/CMakeLists.txt'. Please point GEODE_SDK to the Geode SDK root.")
+endif()
 
 setup_geode_mod(${PROJECT_NAME})
