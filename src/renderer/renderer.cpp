@@ -607,9 +607,6 @@ static bool writePCMWav(const std::filesystem::path& outPath,
     int sampleRate = 48000, channels = 2;
     if (system) system->getSoftwareFormat(&sampleRate, nullptr, &channels);
 
-    std::ofstream wav(outPath, std::ios::binary);
-    if (!wav) return false;
-
     uint32_t dataSize      = static_cast<uint32_t>(pcm.size() * sizeof(float));
     uint32_t byteRate      = sampleRate * channels * sizeof(float);
     uint16_t blockAlign    = static_cast<uint16_t>(channels * sizeof(float));
@@ -620,22 +617,24 @@ static bool writePCMWav(const std::filesystem::path& outPath,
     uint32_t riffSize      = 36 + dataSize;
     uint32_t fmtSize       = 16;
 
-    wav.write("RIFF", 4);
-    wav.write(reinterpret_cast<char*>(&riffSize),      4);
-    wav.write("WAVE", 4);
-    wav.write("fmt ", 4);
-    wav.write(reinterpret_cast<char*>(&fmtSize),       4);
-    wav.write(reinterpret_cast<char*>(&audioFmt),      2);
-    wav.write(reinterpret_cast<char*>(&ch16),          2);
-    wav.write(reinterpret_cast<char*>(&sr32),          4);
-    wav.write(reinterpret_cast<char*>(&byteRate),      4);
-    wav.write(reinterpret_cast<char*>(&blockAlign),    2);
-    wav.write(reinterpret_cast<char*>(&bitsPerSample), 2);
-    wav.write("data", 4);
-    wav.write(reinterpret_cast<char*>(&dataSize),      4);
-    wav.write(reinterpret_cast<const char*>(pcm.data()), dataSize);
+    std::string data;
+    data.append("RIFF", 4);
+    data.append(reinterpret_cast<const char*>(&riffSize),      4);
+    data.append("WAVE", 4);
+    data.append("fmt ", 4);
+    data.append(reinterpret_cast<const char*>(&fmtSize),       4);
+    data.append(reinterpret_cast<const char*>(&audioFmt),      2);
+    data.append(reinterpret_cast<const char*>(&ch16),          2);
+    data.append(reinterpret_cast<const char*>(&sr32),          4);
+    data.append(reinterpret_cast<const char*>(&byteRate),      4);
+    data.append(reinterpret_cast<const char*>(&blockAlign),    2);
+    data.append(reinterpret_cast<const char*>(&bitsPerSample), 2);
+    data.append("data", 4);
+    data.append(reinterpret_cast<const char*>(&dataSize),      4);
+    data.append(reinterpret_cast<const char*>(pcm.data()), dataSize);
 
-    return wav.good();
+    auto span = std::span(reinterpret_cast<const unsigned char*>(data.data()), data.size());
+    return geode::utils::file::writeBinary(outPath, span).isOk();
 }
 
 void Renderer::showEndScreenIfNeeded() {

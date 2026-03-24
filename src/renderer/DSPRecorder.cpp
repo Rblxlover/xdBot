@@ -85,7 +85,7 @@ void DSPRecorder::init() {
         }
         if (capturedTime >= time) break;
         m_masterGroup->setPaused(false);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        asp::sleep(asp::Duration::fromMillis(1));
     }
 }
     
