@@ -385,7 +385,6 @@ void Renderer::recordThread() {
     }
 #endif
 
-    DSPRecorder::get()->stop();
     auto pcm = DSPRecorder::get()->getData();
     
     Loader::get()->queueInMainThread([] {
@@ -494,6 +493,7 @@ void Renderer::stop(int /*frame*/) {
 
     m_renderTexture.end();
     changeRes(true);
+    DSPRecorder::get()->stop();
 }
 
 void Renderer::changeRes(bool og) {
