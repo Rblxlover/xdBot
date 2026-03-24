@@ -95,14 +95,23 @@ bool RenderSettingsLayer::init() {
     // ── Extra Args (y=97) ──────────────────────────────────────────────────
     NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f); bg->setColor({0,0,0});
+    #ifndef GEODE_IS_IOS
     bg->setOpacity(usingApi ? 40 : 75);
+    #else
+    bg->setOpacity(75);
+    #endif
     bg->setPosition(ccp(-28, 97)); bg->setAnchorPoint({0, 1});
     bg->setContentSize({392, 55});
     menu->addChild(bg);
     
     CCLabelBMFont* lbl = CCLabelBMFont::create("Extra Args:", "bigFont.fnt");
     lbl->setPosition(ccp(-105, 88)); lbl->setAnchorPoint({0, 0.5});
-    lbl->setOpacity(usingApi ? 90 : 200); lbl->setScale(0.325);
+    #ifndef GEODE_IS_IOS
+    lbl->setOpacity(usingApi ? 90 : 200);
+    #else
+    lbl->setOpacity(200);
+    #endif
+    lbl->setScale(0.325);
     menu->addChild(lbl);
     
     argsInput = CCTextInputNode::create(150, 30, "args", "chatFont.fnt");
@@ -122,14 +131,23 @@ bool RenderSettingsLayer::init() {
     // ── Audio Args (y=65) ─────────────────────────────────────────────────
     bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f); bg->setColor({0,0,0});
+    #ifndef GEODE_IS_IOS
     bg->setOpacity(usingApi ? 40 : 75);
+    #else
+    bg->setOpacity(75);
+    #endif
     bg->setPosition(ccp(-31, 65)); bg->setAnchorPoint({0, 1});
     bg->setContentSize({401, 55});
     menu->addChild(bg);
     
     lbl = CCLabelBMFont::create("Audio Args:", "bigFont.fnt");
     lbl->setPosition(ccp(-105, 55)); lbl->setAnchorPoint({0, 0.5});
-    lbl->setOpacity(usingApi ? 90 : 200); lbl->setScale(0.325);
+    #ifndef GEODE_IS_IOS
+    lbl->setOpacity(usingApi ? 90 : 200);
+    #else
+    lbl->setOpacity(200);
+    #endif
+    lbl->setScale(0.325);
     menu->addChild(lbl);
     
     audioArgsInput = CCTextInputNode::create(150, 30, "audio args", "chatFont.fnt");
