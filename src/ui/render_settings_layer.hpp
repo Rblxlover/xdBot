@@ -1,7 +1,5 @@
 #pragma once
 
-#ifndef GEODE_IS_IOS
-
 #include "../includes.hpp"
 
 class RenderSettingsLayer : public geode::Popup, public TextInputDelegate {
@@ -44,5 +42,3 @@ public:
     void onDefaults(CCObject*);
     void showInfoPopup(CCObject*);
 };
-
-#endif

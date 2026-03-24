@@ -1,7 +1,5 @@
 #pragma once
 
-#ifndef GEODE_IS_IOS
-
 #include "../includes.hpp"
 #include "record_layer.hpp"
 
@@ -180,5 +178,3 @@ private:
         update();
     }
 };
-
-#endif
