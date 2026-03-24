@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <mutex>
+#include <asp/sync/Mutex.hpp>
 #include <Geode/fmod/fmod.hpp>
 
 #ifndef GEODE_IS_IOS
@@ -30,8 +30,7 @@ private:
 
     FMOD::DSP*          m_dsp         = nullptr;
     FMOD::ChannelGroup* m_masterGroup = nullptr;
-    std::vector<float>  m_data;
-    mutable std::mutex  m_lock;
+    asp::Mutex<std::vector<float>> m_data;
     bool                m_recording   = false;
 };
 
