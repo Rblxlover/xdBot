@@ -13,7 +13,7 @@ class $modify(PlayLayer) {
         PlayLayer::postUpdate(dt);
         auto& g = Global::get();
         
-        #ifdef GEODE_IS_WINDOWS
+        #ifndef GEODE_IS_IOS
         if (g.state != state::none && g.frameLabel && !g.renderer.recording) {
             m_fields->frameLabel->setString(("Frame: " + geode::utils::numToString(Global::getCurrentFrame())).c_str());
         }
@@ -134,7 +134,7 @@ void Interface::updateLabels() {
     if (labelText == "Playing" && state == state::playing && g.mod->getSavedValue<bool>("macro_hide_playing_label"))
     labelText = "";
     
-#ifdef GEODE_IS_WINDOWS
+#ifndef GEODE_IS_IOS
     if (g.renderer.recording && g.mod->getSavedValue<bool>("render_hide_labels")) {
         labelText = "";
         if (CCLabelBMFont* lbl = typeinfo_cast<CCLabelBMFont*>(pl->getChildByID("frame-label"_spr)))

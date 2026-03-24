@@ -22,7 +22,7 @@ class $modify(CCScheduler) {
 
             return CCScheduler::update(dt);
         }
-        #ifdef GEODE_IS_WINDOWS
+        #ifndef GEODE_IS_IOS
         if (g.renderer.recording) {
             if (g.currentPitch != 1.f)
                 Global::updatePitch(1.f);

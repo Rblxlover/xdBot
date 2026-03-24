@@ -151,7 +151,7 @@ class $modify(PlayLayer) {
             g.m_frameCount = 0;
 
         int frame = Global::getCurrentFrame();
-#ifdef GEODE_IS_WINDOWS
+#ifndef GEODE_IS_IOS
         if (!m_isPracticeMode)
             g.renderer.levelStartFrame = frame;
 #endif
@@ -231,6 +231,7 @@ class $modify(BGLHook, GJBaseGameLayer) {
         Global::updateSeed();
 
         bool rendering = false;
+        #ifndef GEODE_IS_IOS
         rendering = g.renderer.recording;
 
         if (g.state != state::none || rendering) {
@@ -240,13 +241,12 @@ class $modify(BGLHook, GJBaseGameLayer) {
             int frame = Global::getCurrentFrame();
             if (frame > 2 && g.firstAttempt && g.macro.xdBotMacro) {
                 g.firstAttempt = false;
-#ifndef GEODE_IS_MOBILE
                 if ((m_isPlatformer || rendering) && !m_levelEndAnimationStarted)
                     return pl->resetLevelFromStart();
                 else if (!m_levelEndAnimationStarted)
                     return pl->resetLevel();
-#endif
             }
+            #endif
 
             if (g.previousFrame == frame && frame != 0 && g.macro.xdBotMacro)
                 return GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
