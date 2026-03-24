@@ -92,7 +92,9 @@ public:
     geode::Popup* layer = nullptr;
 
     Macro macro;
+    #ifndef GEODE_IS_IOS
     Renderer renderer;
+    #endif
     state state = none;
     
     geode::utils::random::Generator gen;
