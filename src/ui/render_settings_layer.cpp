@@ -20,13 +20,13 @@ void RenderSettingsLayer::textChanged(CCTextInputNode* node) {
             return secondsInput->setString(mod->getSavedValue<std::string>("render_seconds_after").c_str());
     }
     
-    mod->setSavedValue("render_seconds_after", secondsInput->getString());
-    mod->setSavedValue("render_args",           argsInput->getString());
-    mod->setSavedValue("render_audio_args",     audioArgsInput->getString());
-    mod->setSavedValue("render_video_args",     videoArgsInput->getString());
-    mod->setSavedValue("render_fade_in_time",   fadeInInput->getString());
-    mod->setSavedValue("render_fade_out_time",  fadeOutInput->getString());
-    mod->setSavedValue("render_file_extension", extensionInput->getString());
+    mod->setSavedValue("render_seconds_after", std::string(secondsInput->getString()));
+    mod->setSavedValue("render_args",           std::string(argsInput->getString()));
+    mod->setSavedValue("render_audio_args",     std::string(audioArgsInput->getString()));
+    mod->setSavedValue("render_video_args",     std::string(videoArgsInput->getString()));
+    mod->setSavedValue("render_fade_in_time",   std::string(fadeInInput->getString()));
+    mod->setSavedValue("render_fade_out_time",  std::string(fadeOutInput->getString()));
+    mod->setSavedValue("render_file_extension", std::string(extensionInput->getString()));
 }
 
 void RenderSettingsLayer::onDefaults(CCObject*) {
