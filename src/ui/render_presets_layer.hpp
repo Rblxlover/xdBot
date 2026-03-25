@@ -47,8 +47,10 @@ private:
             if (!Mod::get()->hasSavedValue(id)) {
                 lbl->setString("N/A");
                 btn->setEnabled(false);
-                spr->getChildByType<NineSlice>(0)->setOpacity(120);
-                spr->getChildByType<CCLabelBMFont>(0)->setOpacity(120);
+                auto ns = spr->getChildByType<NineSlice>(0);
+                auto label = spr->getChildByType<CCLabelBMFont>(0);
+                if (ns) ns->setOpacity(120);
+                if (label) label->setOpacity(120);
             } else {
                 btn->setEnabled(true);
                 matjson::Value json = Mod::get()->getSavedValue<matjson::Value>(id);
@@ -92,7 +94,7 @@ private:
         onClose(nullptr);
 
         Loader::get()->queueInMainThread([] {
-            CCScene* scene = CCDirector::sharedDirector()->getRunningScene();
+            CCScene* scene = CCScene::get();
             if (RecordLayer* layer = scene->getChildByType<RecordLayer>(0))
                 layer->onClose(nullptr);
             RecordLayer::openMenu(true);

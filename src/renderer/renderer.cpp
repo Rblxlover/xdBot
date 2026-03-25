@@ -244,7 +244,7 @@ void Renderer::start() {
     if (width  % 2 != 0) width++;
     if (height % 2 != 0) height++;
 
-    m_renderTexture = MyRenderTexture();
+    m_renderTexture = xdBotRenderTexture();
     m_renderTexture.width  = width;
     m_renderTexture.height = height;
     ogRes    = cocos2d::CCEGLView::get()->getDesignResolutionSize();
@@ -263,7 +263,7 @@ void Renderer::start() {
     m_renderTexture.begin();
     changeRes(false);
 
-    DSPRecorder::get()->start();
+    // DSPRecorder::get()->start();
 
     if (!pl->m_levelEndAnimationStarted && pl->m_isPaused)
         Global::get().restart = true;
@@ -307,6 +307,7 @@ void Renderer::recordThread() {
         auto res = ffmpeg.init(settings);
         if (res.isErr()) {
             recording = false;
+            DSPRecorder::get()->stop();
             m_frameReady.set(true);
             Loader::get()->queueInMainThread([] {
                 FLAlertLayer::create("Error", "FFmpeg API failed to initialize.", "OK")->show();
@@ -517,37 +518,53 @@ void Renderer::changeRes(bool og) {
     view->m_fScaleY = scaleY;
 }
 
-void MyRenderTexture::begin() {
+void xdBotRenderTexture::begin() {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
 
-    auto* tex = new cocos2d::CCTexture2D();
-    {
-        std::unique_ptr<char, void(*)(void*)> data(
-            static_cast<char*>(malloc(width * height * 4)), free);
-        memset(data.get(), 0, width * height * 4);
-        tex->initWithData(data.get(), cocos2d::kCCTexture2DPixelFormat_RGBA8888,
-            width, height,
-            cocos2d::CCSize(static_cast<float>(width), static_cast<float>(height)));
+    // Calculate proper pixel alignment
+    constexpr auto bitsPerPixel = 32;
+    auto bytesPerRow = width * bitsPerPixel / 8;
+    if (bytesPerRow % 8 == 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
+    } else if (bytesPerRow % 4 == 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    } else if (bytesPerRow % 2 == 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+    } else {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     }
-    texture = tex;
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     glGetIntegerv(GL_RENDERBUFFER_BINDING, &old_rbo);
+
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-        GL_TEXTURE_2D, texture->getName(), 0);
-    texture->setAliasTexParameters();
-    texture->autorelease();
+                           GL_TEXTURE_2D, texture, 0);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
     glBindRenderbuffer(GL_RENDERBUFFER, old_rbo);
     glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 }
 
-void MyRenderTexture::end() {
-    if (texture) { /* autorelease handles cleanup */ texture = nullptr; }
+void xdBotRenderTexture::end() {
+    if (texture) { glDeleteTextures(1, &texture); texture = 0; }
     if (fbo) { glDeleteFramebuffers(1, &fbo); fbo = 0; }
 }
 
-void MyRenderTexture::capture(cocos2d::CCNode* node, std::vector<uint8_t>& buffer,
+void xdBotRenderTexture::capture(cocos2d::CCNode* node, std::vector<uint8_t>& buffer,
                                RendererSpinlock& frameReady) {
     auto* director = cocos2d::CCDirector::sharedDirector();
 
@@ -555,7 +572,9 @@ void MyRenderTexture::capture(cocos2d::CCNode* node, std::vector<uint8_t>& buffe
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+    director->setProjection(cocos2d::kCCDirectorProjectionCustom);
     node->visit();
+    director->setProjection(cocos2d::kCCDirectorProjection2D);
 
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer.data());
@@ -593,10 +612,10 @@ void Renderer::handleRecording(PlayLayer* pl, int frame) {
         if (time >= dt) {
             extra_t     = time - dt;
             lastFrame_t = pl->m_gameState.m_levelTime;
+            
+            DSPRecorder::get()->tryUnpause(static_cast<float>(lastFrame_t));
 
             captureFrame();
-
-            DSPRecorder::get()->tryUnpause(static_cast<float>(lastFrame_t));
 
             fmod->m_globalChannel->setVolume(SFXVolume);
             fmod->m_backgroundMusicChannel->setVolume(musicVolume);

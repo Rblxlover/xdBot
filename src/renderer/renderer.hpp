@@ -2,7 +2,6 @@
 
 #include "../includes.hpp"
 #include "ffmpeg/events.hpp"
-#include "DSPRecorder.hpp"
 
 #ifndef GEODE_IS_IOS
 
@@ -26,12 +25,12 @@ enum class AudioMode {
     Record = 1
 };
 
-class MyRenderTexture {
+class xdBotRenderTexture {
 public:
     unsigned width = 0, height = 0;
     int old_fbo = 0, old_rbo = 0;
     unsigned fbo = 0;
-    geode::prelude::CCTexture2D* texture = nullptr;
+    GLuint texture = 0;
     void begin();
     void end();
     void capture(cocos2d::CCNode* node, std::vector<uint8_t>& buffer, RendererSpinlock& frameReady);
@@ -88,7 +87,7 @@ public:
 private:
     RendererSpinlock     m_frameReady;
     std::vector<uint8_t> m_currentFrame;
-    MyRenderTexture      m_renderTexture;
+    xdBotRenderTexture      m_renderTexture;
 
     void recordThread();
     void showEndScreenIfNeeded();
