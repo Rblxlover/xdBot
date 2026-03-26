@@ -151,11 +151,6 @@ class $modify(PlayLayer) {
             g.m_frameCount = 0;
 
         int frame = Global::getCurrentFrame();
-#ifndef GEODE_IS_IOS
-        if (!m_isPracticeMode)
-            g.renderer.levelStartFrame = frame;
-#endif
-
         if (g.restart && m_isPlatformer && g.state != state::none)
             m_fields->delayedLevelRestart = frame + 2;
 
@@ -236,11 +231,6 @@ class $modify(BGLHook, GJBaseGameLayer) {
 #endif
 
         if (g.state != state::none || rendering) {
-#ifndef GEODE_IS_IOS
-            if (!g.firstAttempt) {
-                g.renderer.dontRender = false;
-            }
-#endif
             int frame = Global::getCurrentFrame();
             if (frame > 2 && g.firstAttempt && g.macro.xdBotMacro) {
                 g.firstAttempt = false;

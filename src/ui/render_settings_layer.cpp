@@ -92,7 +92,6 @@ bool RenderSettingsLayer::init() {
     m_mainLayer->addChild(menu);
     menu->setPositionX(menu->getPositionX() - 67);
     
-    // ── Extra Args (y=97) ──────────────────────────────────────────────────
     NineSlice* bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f); bg->setColor({0,0,0});
     #ifndef GEODE_IS_IOS
@@ -128,7 +127,6 @@ bool RenderSettingsLayer::init() {
     argsInput->setAllowedChars(" 0123456789abcdefghijklmnopqrstuvwxyz-_:;.\"\\/[](){}+=<>|!*&'%@");
     menu->addChild(argsInput);
     
-    // ── Audio Args (y=65) ─────────────────────────────────────────────────
     bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.355f); bg->setColor({0,0,0});
     #ifndef GEODE_IS_IOS
@@ -164,7 +162,6 @@ bool RenderSettingsLayer::init() {
     audioArgsInput->setAllowedChars(" 0123456789abcdefghijklmnopqrstuvwxyz-_:;.\"\\/[](){}+=<>|!*&'%@");
     menu->addChild(audioArgsInput);
     
-    // ── Video Args (y=34) ─────────────────────────────────────────────────
     bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.375f); bg->setColor({0,0,0}); bg->setOpacity(75);
     bg->setPosition(ccp(49, 4)); bg->setAnchorPoint({0, 1});
@@ -172,13 +169,23 @@ bool RenderSettingsLayer::init() {
     menu->addChild(bg);
     
     bg = NineSlice::create("square02b_001.png", { 0, 0, 80, 80 });
-    bg->setScale(0.355f); bg->setColor({0,0,0}); bg->setOpacity(75);
+    bg->setScale(0.355f); bg->setColor({0,0,0});
+    #ifndef GEODE_IS_IOS
+    bg->setOpacity(usingApi ? 40 : 75);
+    #else
+    bg->setOpacity(75);
+    #endif
     bg->setPosition({-29, 34}); bg->setAnchorPoint({0, 1});
     bg->setContentSize({395, 55});
     menu->addChild(bg);
     
     lbl = CCLabelBMFont::create("Video Args:", "bigFont.fnt");
-    lbl->setAnchorPoint({0, 0.5}); lbl->setOpacity(200);
+    lbl->setAnchorPoint({0, 0.5});
+    #ifndef GEODE_IS_IOS
+    lbl->setOpacity(usingApi ? 90 : 200);
+    #else
+    lbl->setOpacity(200);
+    #endif
     lbl->setScale(0.325f); lbl->setPosition({-105, 24});
     menu->addChild(lbl);
     
@@ -191,12 +198,15 @@ bool RenderSettingsLayer::init() {
     videoArgsInput->setMouseEnabled(true); videoArgsInput->setTouchEnabled(true);
     videoArgsInput->setContentSize({180, 20}); videoArgsInput->setMaxLabelWidth(165.f);
     videoArgsInput->setScale(0.75);
+    #ifndef GEODE_IS_IOS
+    videoArgsInput->setString(usingApi ? "" : mod->getSavedValue<std::string>("render_video_args").c_str());
+    #else
     videoArgsInput->setString(mod->getSavedValue<std::string>("render_video_args").c_str());
+    #endif
     videoArgsInput->setAllowedChars(" 0123456789abcdefghijklmnopqrstuvwxyz-_:;.\"\\/[](){}+=<>|!*&'%@");
     videoArgsInput->setDelegate(this);
     menu->addChild(videoArgsInput);
     
-    // ── Render after completion + File Extension (y=-5) ───────────────────
     lbl = CCLabelBMFont::create("Render after completion:", "bigFont.fnt");
     lbl->setPosition(ccp(-105, -5)); lbl->setAnchorPoint({0, 0.5});
     lbl->setOpacity(200); lbl->setScale(0.325);
@@ -233,7 +243,6 @@ bool RenderSettingsLayer::init() {
     extensionInput->getInputNode()->setAllowedChars("abcdefghijklmnñopqrstuvwxyz0123456789.");
     menu->addChild(extensionInput);
     
-    // ── Fade In (y=-32) ───────────────────────────────────────────────────
     lbl = CCLabelBMFont::create("Fade In:", "bigFont.fnt");
     lbl->setPosition(ccp(25, -32)); lbl->setAnchorPoint({0, 0.5});
     lbl->setOpacity(200); lbl->setScale(0.325);
@@ -255,7 +264,6 @@ bool RenderSettingsLayer::init() {
     toggle->setID("render_fade_in");
     menu->addChild(toggle);
     
-    // ── Fade Out (y=-58) ──────────────────────────────────────────────────
     lbl = CCLabelBMFont::create("Fade Out:", "bigFont.fnt");
     lbl->setPosition(ccp(25, -58)); lbl->setAnchorPoint({0, 0.5});
     lbl->setOpacity(200); lbl->setScale(0.325);
@@ -277,7 +285,6 @@ bool RenderSettingsLayer::init() {
     toggle->setID("render_fade_out");
     menu->addChild(toggle);
     
-    // ── Hide Endscreen (y=-32 left column, was -83) ───────────────────────
     lbl = CCLabelBMFont::create("Hide Endscreen:", "bigFont.fnt");
     lbl->setPosition(ccp(-105, -32)); lbl->setAnchorPoint({0, 0.5});
     lbl->setOpacity(200); lbl->setScale(0.325);
@@ -292,7 +299,6 @@ bool RenderSettingsLayer::init() {
     toggle->setID("render_hide_endscreen");
     menu->addChild(toggle);
     
-    // ── Hide Level Complete (y=-58 left column, was -108) ─────────────────
     lbl = CCLabelBMFont::create("Hide Level Complete:", "bigFont.fnt");
     lbl->setPosition(ccp(-105, -58)); lbl->setAnchorPoint({0, 0.5});
     lbl->setOpacity(200); lbl->setScale(0.25);
@@ -307,7 +313,6 @@ bool RenderSettingsLayer::init() {
     toggle->setID("render_hide_levelcomplete");
     menu->addChild(toggle);
     
-    // ── Volume sliders ────────────────────────────────────────────────────
     lbl = CCLabelBMFont::create("SFX Volume", "goldFont.fnt");
     lbl->setScale(0.475f); lbl->setPosition({188, 42});
     menu->addChild(lbl);
@@ -328,7 +333,6 @@ bool RenderSettingsLayer::init() {
     musicSlider->setValue(Mod::get()->getSavedValue<double>("render_music_volume"));
     menu->addChild(musicSlider);
     
-    // ── OK + Restore Defaults (shifted up by 52 since two rows removed) ───
     ButtonSprite* spr = ButtonSprite::create("OK");
     spr->setScale(0.875);
     CCMenuItemSpriteExtra* btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(RenderSettingsLayer::close));
@@ -342,12 +346,13 @@ bool RenderSettingsLayer::init() {
     menu->addChild(btn);
 
     #ifndef GEODE_IS_IOS
-    // ── API dimming (no subprocess path — usingApi always true on non-iOS) ─
     if (usingApi) {
         argsInput->m_textLabel->setOpacity(100);
         audioArgsInput->m_textLabel->setOpacity(100);
+        videoArgsInput->m_textLabel->setOpacity(100);
         argsInput->setID("disabled-input"_spr);
         audioArgsInput->setID("disabled-input"_spr);
+        videoArgsInput->setID("disabled-input"_spr);
         
         extensionInput->setEnabled(false);
         extensionInput->getInputNode()->m_textLabel->setOpacity(100);
